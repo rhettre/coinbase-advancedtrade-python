@@ -1,0 +1,35 @@
+from setuptools import setup, find_packages
+
+setup(
+    name='coinbase-advancedtrade-python',
+    version='0.1.0',
+    description='The unofficial Python client for the Coinbase Advanced Trade API',
+    author='Rhett Reisman',
+    author_email='rhett@rhett.blog',
+    url='https://github.com/rhettre/coinbase-advancedtrade-python',
+    packages=find_packages(),
+    install_requires=[
+        'http.client',
+        'hmac',
+        'hashlib',
+        'json',
+        'time',
+        'typing',
+        'enum',
+        'datetime',
+        'uuid',
+    ],
+    keywords=['gdax', 'gdax-api', 'cbpro', 'cbpro-api', 'orderbook', 'trade', 'bitcoin', 'ethereum', 'BTC', 'ETH',
+              'client', 'api', 'wrapper', 'exchange', 'crypto', 'currency', 'trading', 'trading-api', 'coinbase',
+              'advanced-trade', 'prime', 'coinbaseadvancedtrade', 'coinbase-advanced-trade'],
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+    ],
+)
