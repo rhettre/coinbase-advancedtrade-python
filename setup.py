@@ -8,7 +8,7 @@ with open("requirements.txt") as f:
 
 setup(
     name='coinbase-advancedtrade-python',
-    version='0.1.1',
+    version='0.1.2',
     description='The unofficial Python client for the Coinbase Advanced Trade API',
     long_description=long_description,
     long_description_content_type="text/markdown",
