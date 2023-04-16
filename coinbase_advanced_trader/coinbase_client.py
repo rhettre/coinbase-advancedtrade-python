@@ -20,7 +20,14 @@ def generate_client_order_id():
     return uuid.uuid4()
 
 
-cb_auth = CBAuth()
+cb_auth = CBAuth(API_KEY, API_SECRET)
+
+# Add the set_credentials function here
+
+
+def set_credentials(api_key, api_secret):
+    global cb_auth
+    cb_auth = CBAuth(api_key, api_secret)
 
 
 def listAccounts(limit=49, cursor=None):
