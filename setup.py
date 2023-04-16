@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 with open("requirements.txt") as f:
-    requirements = f.read().splitlines
+    requirements = f.read().splitlines()
 
 setup(
     name='coinbase-advancedtrade-python',
