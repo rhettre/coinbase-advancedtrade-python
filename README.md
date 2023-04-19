@@ -79,7 +79,8 @@ Here's an example of how to use the package:
     price = 10000
 
     response = buy_bitcoin(amount_to_buy, currency, price)
-    print("Buy order response:", response)'''
+    print("Buy order response:", response)
+    '''
 
 ## Documentation
 
