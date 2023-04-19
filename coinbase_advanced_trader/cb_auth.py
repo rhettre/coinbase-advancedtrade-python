@@ -17,7 +17,8 @@ class CBAuth:
             query_params = '&'.join([f'{k}={v}' for k, v in params.items()])
             path = f'{path}?{query_params}'
 
-        with http.client.HTTPSConnection("api.coinbase.com") as conn:
+        conn = http.client.HTTPSConnection("api.coinbase.com")
+        try:
             timestamp = str(int(time.time()))
             message = timestamp + method.upper() + \
                 path.split('?')[0] + str(body)
@@ -45,3 +46,5 @@ class CBAuth:
             except json.JSONDecodeError:
                 print("Error: Unable to decode JSON response. Raw response data:", data)
                 return None
+        finally:
+            conn.close()

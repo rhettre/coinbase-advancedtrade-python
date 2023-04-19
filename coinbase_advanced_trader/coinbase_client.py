@@ -17,7 +17,7 @@ class Method(Enum):
 
 
 def generate_client_order_id():
-    return uuid.uuid4()
+    return str(uuid.uuid4())
 
 
 cb_auth = CBAuth(API_KEY, API_SECRET)
