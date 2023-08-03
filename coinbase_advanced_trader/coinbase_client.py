@@ -31,7 +31,7 @@ def set_credentials(api_key, api_secret):
 
 
 def listAccounts(limit=49, cursor=None):
-    return cb_auth(Method.GET.value, '/api/v3/brokerage/accounts', params={'limit': limit, 'cursor': cursor})
+    return cb_auth(Method.GET.value, '/api/v3/brokerage/accounts', {'limit': limit, 'cursor': cursor})
 
 
 def getAccount(account_uuid):
@@ -54,11 +54,11 @@ def cancelOrders(order_ids):
 
 
 def listOrders(**kwargs):
-    return cb_auth(Method.GET.value, '/api/v3/brokerage/orders/historical/batch', params=kwargs)
+    return cb_auth(Method.GET.value, '/api/v3/brokerage/orders/historical/batch', kwargs)
 
 
 def listFills(**kwargs):
-    return cb_auth(Method.GET.value, '/api/v3/brokerage/orders/historical/fills', params=kwargs)
+    return cb_auth(Method.GET.value, '/api/v3/brokerage/orders/historical/fills', kwargs)
 
 
 def getOrder(order_id):
@@ -66,7 +66,7 @@ def getOrder(order_id):
 
 
 def listProducts(**kwargs):
-    return cb_auth(Method.GET.value, '/api/v3/brokerage/products', params=kwargs)
+    return cb_auth(Method.GET.value, '/api/v3/brokerage/products', kwargs)
 
 
 def getProduct(product_id):
@@ -79,11 +79,11 @@ def getProductCandles(product_id, start, end, granularity):
         'end': end,
         'granularity': granularity
     }
-    return cb_auth(Method.GET.value, f'/api/v3/brokerage/products/{product_id}/candles', params=params)
+    return cb_auth(Method.GET.value, f'/api/v3/brokerage/products/{product_id}/candles', params)
 
 
 def getMarketTrades(product_id, limit):
-    return cb_auth(Method.GET.value, f'/api/v3/brokerage/products/{product_id}/ticker', params={'limit': limit})
+    return cb_auth(Method.GET.value, f'/api/v3/brokerage/products/{product_id}/ticker', {'limit': limit})
 
 
 def getTransactionsSummary(start_date, end_date, user_native_currency='USD', product_type='SPOT'):
@@ -93,4 +93,4 @@ def getTransactionsSummary(start_date, end_date, user_native_currency='USD', pro
         'user_native_currency': user_native_currency,
         'product_type': product_type
     }
-    return cb_auth(Method.GET.value, '/api/v3/brokerage/transaction_summary', params=params)
+    return cb_auth(Method.GET.value, '/api/v3/brokerage/transaction_summary', params)
