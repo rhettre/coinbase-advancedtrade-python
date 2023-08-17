@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 from datetime import datetime
 from coinbase_advanced_trader.coinbase_client import (
+    Method,
     listAccounts,
     getAccount,
     createOrder,
@@ -128,88 +129,43 @@ class TestCoinbaseClient(unittest.TestCase):
         self.assertEqual(account['hold']['currency'], "BTC")
 
     @patch('coinbase_advanced_trader.coinbase_client.cb_auth')
-    def test_create_order(self, mock_cb_auth):
-        # Mock the response from the API
-        mock_cb_auth.return_value = {
-            "success": True,
-            "failure_reason": "string",
-            "order_id": "string",
-            "success_response": {
-                "order_id": "11111-00000-000000",
-                "product_id": "BTC-USD",
-                "side": "UNKNOWN_ORDER_SIDE",
-                "client_order_id": "0000-00000-000000"
-            },
-            "error_response": {
-                "error": "UNKNOWN_FAILURE_REASON",
-                "message": "The order configuration was invalid",
-                "error_details": "Market orders cannot be placed with empty order sizes",
-                "preview_failure_reason": "UNKNOWN_PREVIEW_FAILURE_REASON",
-                "new_order_failure_reason": "UNKNOWN_FAILURE_REASON"
-            },
-            "order_configuration": {
-                "market_market_ioc": {
-                    "quote_size": "10.00",
-                    "base_size": "0.001"
-                },
-                "limit_limit_gtc": {
-                    "base_size": "0.001",
-                    "limit_price": "10000.00",
-                    "post_only": False
-                },
-                "limit_limit_gtd": {
-                    "base_size": "0.001",
-                    "limit_price": "10000.00",
-                    "end_time": "2021-05-31T09:59:59Z",
-                    "post_only": False
-                },
-                "stop_limit_stop_limit_gtc": {
-                    "base_size": "0.001",
-                    "limit_price": "10000.00",
-                    "stop_price": "20000.00",
-                    "stop_direction": "UNKNOWN_STOP_DIRECTION"
-                },
-                "stop_limit_stop_limit_gtd": {
-                    "base_size": 0.001,
-                    "limit_price": "10000.00",
-                    "stop_price": "20000.00",
-                    "end_time": "2021-05-31T09:59:59Z",
-                    "stop_direction": "UNKNOWN_STOP_DIRECTION"
-                }
-            }
+    def test_createOrder(self, mock_cb_auth):
+        # Mock the cb_auth function to return a sample response
+        mock_cb_auth.return_value = {'result': 'success'}
+
+        # Test the createOrder function
+        client_order_id = 'example_order_id'
+        product_id = 'BTC-USD'
+        side = 'buy'
+        order_type = 'limit_limit_gtc'
+        order_configuration = {
+            'limit_price': '30000.00',
+            'base_size': '0.01',
+            'post_only': True
         }
 
-        # Call the function with sample input
-        order_params = {
-            "client_order_id": "0000-00000-000000",
-            "product_id": "BTC-USD",
-            "side": "BUY",
-            "order_configuration": {
-                "market_market_ioc": {
-                    "quote_size": "10.00",
-                    "base_size": "0.001"
-                }
-            }
-        }
         result = createOrder(
-            order_params["client_order_id"],
-            order_params["product_id"],
-            order_params["side"],
-            order_params["order_configuration"]
+            client_order_id=client_order_id,
+            product_id=product_id,
+            side=side,
+            order_type=order_type,
+            order_configuration=order_configuration
         )
 
-        # Assert the expected output
-        self.assertIsNotNone(result)
-        self.assertIsInstance(result, dict)
-        self.assertTrue(result['success'])
-        self.assertIn('success_response', result)
-        success_response = result['success_response']
-        self.assertEqual(success_response['order_id'], "11111-00000-000000")
-        self.assertEqual(success_response['product_id'], "BTC-USD")
-        self.assertEqual(success_response['side'], "UNKNOWN_ORDER_SIDE")
-        self.assertEqual(
-            success_response['client_order_id'], "0000-00000-000000")
+        # Check that the cb_auth function was called with the correct arguments
+        expected_payload = {
+            'client_order_id': client_order_id,
+            'product_id': product_id,
+            'side': side,
+            'order_configuration': {
+                order_type: order_configuration
+            }
+        }
+        mock_cb_auth.assert_called_with(Method.POST.value, '/api/v3/brokerage/orders', expected_payload)
 
+        # Check that the createOrder function returns the response from cb_auth
+        self.assertEqual(result, {'result': 'success'})
+    
     @patch('coinbase_advanced_trader.coinbase_client.cb_auth')
     def test_cancel_orders(self, mock_cb_auth):
         # Mock the response from the API

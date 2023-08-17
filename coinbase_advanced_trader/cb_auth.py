@@ -8,15 +8,52 @@ from typing import Union, Dict
 
 
 class CBAuth:
-    def __init__(self, api_key, api_secret):
+    """
+    Singleton class for Coinbase authentication.
+    """
+
+    _instance = None  # Class attribute to hold the singleton instance
+
+    def __new__(cls):
+        """
+        Override the __new__ method to control the object creation process.
+        :return: A single instance of CBAuth
+        """
+        if cls._instance is None:
+            print("Creating CBAuth instance")
+            cls._instance = super(CBAuth, cls).__new__(cls)
+            cls._instance.init()
+        return cls._instance
+
+    def init(self):
+        """
+        Initialize the CBAuth instance with API credentials.
+        """
+        self.key = None
+        self.secret = None
+
+    def set_credentials(self, api_key, api_secret):
+        """
+        Update the API credentials used for authentication.
+        :param api_key: The API Key for Coinbase API
+        :param api_secret: The API Secret for Coinbase API
+        """
         self.key = api_key
         self.secret = api_secret
 
     def __call__(self, method: str, path: str, body: Union[Dict, str] = '', params: Dict[str, str] = None) -> Dict:
+        """
+        Prepare and send an authenticated request to the Coinbase API.
+
+        :param method: HTTP method (e.g., 'GET', 'POST')
+        :param path: API endpoint path
+        :param body: Request payload
+        :param params: URL parameters
+        :return: Response from the Coinbase API as a dictionary
+        """
         path = self.add_query_params(path, params)
         body_encoded = self.prepare_body(body)
         headers = self.create_headers(method, path, body)
-
         return self.send_request(method, path, body_encoded, headers)
 
     def add_query_params(self, path, params):
@@ -36,7 +73,7 @@ class CBAuth:
             'utf-8'), message.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
 
         return {
-            "accept": "application/json",
+            "Content-Type": "application/json",
             "CB-ACCESS-KEY": self.key,
             "CB-ACCESS-SIGN": signature,
             "CB-ACCESS-TIMESTAMP": timestamp

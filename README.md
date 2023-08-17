@@ -24,9 +24,23 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
       - Create a new API key with the appropriate permissions.
       - Copy the API key and secret to config.py.
 
-## Usage
+## Authentication
+Here's an example of how to authenticate: 
 
-Here's an example of how to use the package: 
+````python
+from coinbase_advanced_trader.config import set_api_credentials
+
+# Set your API key and secret
+API_KEY = "ABCD1234"
+API_SECRET = "XYZ9876"
+
+# Set the API credentials once, and it updates the CBAuth singleton instance
+set_api_credentials(API_KEY, API_SECRET)
+````
+
+## Usage of Wrapper
+
+Here's an example of how to use the base Python wrapper: 
 
 ````python
 from coinbase_advanced_trader import coinbase_client
@@ -80,6 +94,23 @@ price = 10000
 
 response = buy_bitcoin(amount_to_buy, currency, price)
 print("Buy order response:", response)
+````
+
+## Usage of Strategies
+
+Here's an example of how to use the strategies package to buy $20 worth of Bitcoin: 
+
+````python
+from coinbase_advanced_trader.strategies.limit_order_strategies import fiat_limit_buy
+
+# Define the trading parameters
+product_id = "BTC-USD"  # Replace with your desired trading pair
+usd_size = 20  # Replace with your desired USD amount to spend
+
+# Perform a limit buy for just below the spot price of your desired trading pair
+limit_buy_order = fiat_limit_buy(product_id, usd_size)
+print("Limit Sell Order Response:", limit_buy_order)
+
 ````
 
 ## Documentation
