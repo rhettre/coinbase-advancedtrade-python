@@ -13,3 +13,5 @@ coinbase_advanced_trader/__pycache__/
 .coverage
 tests/__pycache__/
 .pytest_cache
+.vscode/
+test.py
