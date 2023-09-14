@@ -6,7 +6,8 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 
 - Easy-to-use Python wrapper for the Coinbase Advanced Trade API
 - Supports all endpoints and methods provided by the official API
-- Lightweight and efficient implementation
+- Lightweight and efficient wrapper
+- Added support for trading strategies covered on the [YouTube channel](https://rhett.blog/youtube)
 
 ## Setup
 
@@ -36,64 +37,6 @@ API_SECRET = "XYZ9876"
 
 # Set the API credentials once, and it updates the CBAuth singleton instance
 set_api_credentials(API_KEY, API_SECRET)
-````
-
-## Usage of Wrapper
-
-Here's an example of how to use the base Python wrapper: 
-
-````python
-from coinbase_advanced_trader import coinbase_client
-from coinbase_advanced_trader.coinbase_client import Side
-
-# Set your API key and secret
-API_KEY = "your_api_key"
-API_SECRET = "your_api_secret"
-
-# Set the credentials
-coinbase_client.set_credentials(API_KEY, API_SECRET)
-
-
-def buy_bitcoin(amount, currency="USD", price=None):
-  product_id = f"BTC-{currency}"
-
-  if price:
-      order_type = "limit_limit_gtc"
-      order_configuration = {
-          order_type: {
-              "base_size": str(amount),
-              "limit_price": str(price)
-          }
-      }
-  else:
-      order_type = "market_market_ioc"
-      order_configuration = {
-          order_type: {
-              "quote_size": str(amount),
-          }
-      }
-
-  client_order_id = coinbase_client.generate_client_order_id()
-  side = Side.BUY.name
-
-  response = coinbase_client.createOrder(
-      client_order_id=client_order_id,
-      product_id=product_id,
-      side=side,
-      order_configuration=order_configuration
-  )
-
-  return response
-
-
-amount_to_buy = 0.001
-currency = "USD"
-
-# You can specify a price for a limit order, or leave it as None for a market order
-price = 10000
-
-response = buy_bitcoin(amount_to_buy, currency, price)
-print("Buy order response:", response)
 ````
 
 ## Usage of Strategies
