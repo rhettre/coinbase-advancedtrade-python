@@ -48,12 +48,41 @@ from coinbase_advanced_trader.strategies.limit_order_strategies import fiat_limi
 
 # Define the trading parameters
 product_id = "BTC-USD"  # Replace with your desired trading pair
-usd_size = 20  # Replace with your desired USD amount to spend
+usd_size = 20  # Replace with your desired USD amount to spend``
 
-# Perform a limit buy for just below the spot price of your desired trading pair
+# Perform a limit buy
 limit_buy_order = fiat_limit_buy(product_id, usd_size)
-print("Limit Sell Order Response:", limit_buy_order)
+````
 
+## Usage of Fear and Greed Index
+````python
+from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple
+
+# Define the product id
+product_id = "BTC-USD"
+
+# Implement the strategy
+trade_based_on_fgi_simple(product_id, 10)
+
+````
+
+## Usage of Fear and Greed Index (Pro)
+````python
+# Import necessary modules and functions
+from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_pro
+
+# Define the product id
+product_id = "BTC-USD"
+
+# Define the custom schedule
+custom_schedule = [
+    {"threshold": 20, "factor": 1, "action": "buy"},
+    {"threshold": 80, "factor": 0.5, "action": "buy"},
+    {"threshold": 100, "factor": 1, "action": "sell"},
+]
+
+# Implement the strategy
+response = trade_based_on_fgi_pro(product_id, 10, custom_schedule)
 ````
 
 ## Documentation
@@ -72,5 +101,5 @@ For more information about the Coinbase Advanced Trader API, consult the [offici
 
 ## Disclaimer
 
-This project is not affiliated with, maintained, or endorsed by Coinbase. Use this software at your own risk. Trading cryptocurrencies carries a risk of financial loss. The developers of this software are not responsible for any financial losses or damages incurred while using this software.
+This project is not affiliated with, maintained, or endorsed by Coinbase. Use this software at your own risk. Trading cryptocurrencies carries a risk of financial loss. The developers of this software are not responsible for any financial losses or damages incurred while using this software. Nothing in this software should be seen as an inducement to trade with a particular strategy or as financial advice.
 

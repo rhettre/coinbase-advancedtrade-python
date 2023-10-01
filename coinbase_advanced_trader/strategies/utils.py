@@ -7,10 +7,13 @@ cb_auth = CBAuth()
 
 def get_spot_price(product_id):
     """
-    Fetch the current spot price of a specified product.
+    Fetches the current spot price of a specified product.
 
-    :param product_id: The ID of the product (e.g., "BTC-USD").
-    :return: The spot price as a float, or None if an error occurs.
+    Args:
+        product_id (str): The ID of the product (e.g., "BTC-USD").
+
+    Returns:
+        float: The spot price as a float, or None if an error occurs.
     """
     try:
         response = client.getProduct(product_id)

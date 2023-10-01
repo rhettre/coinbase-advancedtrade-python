@@ -10,12 +10,15 @@ cb_auth = CBAuth()
 
 def fiat_limit_buy(product_id, fiat_amount, price_multiplier=BUY_PRICE_MULTIPLIER):
     """
-    Place a limit buy order.
+    Places a limit buy order.
 
-    :param product_id: The ID of the product to buy (e.g., "BTC-USD").
-    :param fiat_amount: The amount in USD or other fiat to spend on buying (ie. $200).
-    :param price_multiplier: Multiplier to apply to the current spot price to get the limit price.
-    :return: Response of the order details.
+    Args:
+        product_id (str): The ID of the product to buy (e.g., "BTC-USD").
+        fiat_amount (float): The amount in USD or other fiat to spend on buying (ie. $200).
+        price_multiplier (float, optional): Multiplier to apply to the current spot price to get the limit price. Defaults to BUY_PRICE_MULTIPLIER.
+
+    Returns:
+        dict: The response of the order details.
     """
     # Coinbase maker fee rate
     maker_fee_rate = Decimal('0.004')
@@ -60,17 +63,35 @@ def fiat_limit_buy(product_id, fiat_amount, price_multiplier=BUY_PRICE_MULTIPLIE
         order_configuration=order_configuration
     )
 
+    # Print a human-readable message
+    if order_details['success']:
+        base_size = Decimal(
+            order_details['order_configuration']['limit_limit_gtc']['base_size'])
+        limit_price = Decimal(
+            order_details['order_configuration']['limit_limit_gtc']['limit_price'])
+        total_amount = base_size * limit_price
+        print(
+            f"Successfully placed a limit buy order for {base_size} {product_id} (${total_amount:.2f}) at a price of {limit_price} USD.")
+    else:
+        print(
+            f"Failed to place a limit buy order. Reason: {order_details['failure_reason']}")
+
+    print("Coinbase response:", order_details)
+
     return order_details
 
 
 def fiat_limit_sell(product_id, fiat_amount, price_multiplier=SELL_PRICE_MULTIPLIER):
     """
-    Place a limit sell order.
+    Places a limit sell order.
 
-    :param product_id: The ID of the product to sell (e.g., "BTC-USD").
-    :param fiat_amount: The amount in USD or other fiat to receive from selling (ie. $200).
-    :param price_multiplier: Multiplier to apply to the current spot price to get the limit price.
-    :return: Response of the order details.
+    Args:
+        product_id (str): The ID of the product to sell (e.g., "BTC-USD").
+        fiat_amount (float): The amount in USD or other fiat to receive from selling (ie. $200).
+        price_multiplier (float, optional): Multiplier to apply to the current spot price to get the limit price. Defaults to SELL_PRICE_MULTIPLIER.
+
+    Returns:
+        dict: The response of the order details.
     """
     # Coinbase maker fee rate
     maker_fee_rate = Decimal('0.004')
@@ -114,5 +135,20 @@ def fiat_limit_sell(product_id, fiat_amount, price_multiplier=SELL_PRICE_MULTIPL
         order_type='limit_limit_gtc',
         order_configuration=order_configuration
     )
+
+    # Print a human-readable message
+    if order_details['success']:
+        base_size = Decimal(
+            order_details['order_configuration']['limit_limit_gtc']['base_size'])
+        limit_price = Decimal(
+            order_details['order_configuration']['limit_limit_gtc']['limit_price'])
+        total_amount = base_size * limit_price
+        print(
+            f"Successfully placed a limit buy order for {base_size} {product_id} (${total_amount:.2f}) at a price of {limit_price} USD.")
+    else:
+        print(
+            f"Failed to place a limit buy order. Reason: {order_details['failure_reason']}")
+
+    print("Coinbase response:", order_details)
 
     return order_details
