@@ -15,11 +15,7 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
          ```bash
             pip install coinbase-advancedtrade-python
 
-   2. Install the required Python packages:
-         ```bash
-            pip install -r requirements.txt
-
-   3. Set your API key and secret in config.py. To obtain your API key and secret, follow the steps below:
+   2. Set your API key and secret in config.py. To obtain your API key and secret, follow the steps below:
       - Log in to your Coinbase account.
       - Navigate to API settings.
       - Create a new API key with the appropriate permissions.
@@ -68,7 +64,6 @@ trade_based_on_fgi_simple(product_id, 10)
 
 ## Usage of Fear and Greed Index (Pro)
 ````python
-# Import necessary modules and functions
 from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_pro
 
 # Define the product id
