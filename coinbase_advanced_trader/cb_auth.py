@@ -20,7 +20,7 @@ class CBAuth:
         :return: A single instance of CBAuth
         """
         if cls._instance is None:
-            print("Creating CBAuth instance")
+            print("Authenticating with Coinbase")
             cls._instance = super(CBAuth, cls).__new__(cls)
             cls._instance.init()
         return cls._instance
