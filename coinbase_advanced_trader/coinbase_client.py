@@ -164,7 +164,16 @@ def getProduct(product_id):
     :param product_id: The ID of the product to retrieve information for.
     :return: A dictionary containing the response from the server. This will include details about the product, such as the product ID, product type, and contract expiry type.
     """
-    return cb_auth(Method.GET.value, f'/api/v3/brokerage/products/{product_id}')
+    response = cb_auth(
+        Method.GET.value, f'/api/v3/brokerage/products/{product_id}')
+
+    # Check if there's an error in the response
+    if 'error' in response and response['error'] == 'PERMISSION_DENIED':
+        print(
+            f"Error: {response['message']}. Details: {response['error_details']}")
+        return None
+
+    return response
 
 
 def getProductCandles(product_id, start, end, granularity):
