@@ -17,6 +17,7 @@ class Method(Enum):
     POST = "POST"
     GET = "GET"
     DELETE = "DELETE"
+    PUT = "PUT"
 
 
 
@@ -274,5 +275,5 @@ def getPortfolioBreakdown(portfolio_uuid):
 def deletePortfolio(portfolio_uuid):
     return cb_auth(Method.DELETE.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
 
-def editPortfolio(portfolio_uuid):
-    return cb_auth(Method.POST.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
+def editPortfolio(portfolio_uuid, name):
+    return cb_auth(Method.PUT.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}', {"name" : name})
