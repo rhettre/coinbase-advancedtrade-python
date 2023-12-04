@@ -245,3 +245,23 @@ def listAccounts(limit=49, cursor=None):
 
 def listPortfolios(portfolio_type="UNDEFINED"):
     return cb_auth(Method.GET.value, '/api/v3/brokerage/portfolios', {'portfolio_type':portfolio_type})
+
+def createOrder(name):
+    # print("Payload being sent to server:", payload)  # For debugging
+    return cb_auth(Method.POST.value, '/api/v3/brokerage/portfolios', {"name":name})
+
+def movePortfolioFunds(value, currencySymbol, source_portfolio_uuid, target_portfolio_uuid):
+    payload = {
+        "funds" : {
+            "value" : value,
+            "currency" : currencySymbol
+        },
+        "source_portfolio_uuid" : source_portfolio_uuid,
+        "target_portfolio_uuid" : target_portfolio_uuid
+    }
+
+    return cb_auth(
+        Method.POST.value,
+        '/api/v3/brokerage/portfolios/move_funds',
+        payload
+    )
