@@ -16,6 +16,7 @@ class Side(Enum):
 class Method(Enum):
     POST = "POST"
     GET = "GET"
+    DELETE = "DELETE"
 
 
 
@@ -269,4 +270,8 @@ def movePortfolioFunds(value, currencySymbol, source_portfolio_uuid, target_port
 
 def getPortfolioBreakdown(portfolio_uuid):
     return cb_auth(Method.GET.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
+
+def deletePortfolio(portfolio_uuid):
+    # print("Payload being sent to server:", payload)  # For debugging
+    return cb_auth(Method.DELETE.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
 
