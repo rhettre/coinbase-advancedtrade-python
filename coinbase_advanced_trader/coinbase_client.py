@@ -230,3 +230,18 @@ def getTransactionsSummary(start_date, end_date, user_native_currency='USD', pro
         'contract_expiry_type': contract_expiry_type
     }
     return cb_auth(Method.GET.value, '/api/v3/brokerage/transaction_summary', params)
+
+def listAccounts(limit=49, cursor=None):
+    """
+    Get a list of authenticated accounts for the current user.
+
+    This function uses the GET method to retrieve a list of authenticated accounts from the Coinbase Advanced Trade API.
+
+    :param limit: A pagination limit with default of 49 and maximum of 250. If has_next is true, additional orders are available to be fetched with pagination and the cursor value in the response can be passed as cursor parameter in the subsequent request.
+    :param cursor: Cursor used for pagination. When provided, the response returns responses after this cursor.
+    :return: A dictionary containing the response from the server. A successful response will return a 200 status code. An unexpected error will return a default error response.
+    """
+    return cb_auth(Method.GET.value, '/api/v3/brokerage/accounts', {'limit': limit, 'cursor': cursor})
+
+def listPortfolios(portfolio_type="UNDEFINED"):
+    return cb_auth(Method.GET.value, '/api/v3/brokerage/portfolios', {'portfolio_type':portfolio_type})
