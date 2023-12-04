@@ -18,6 +18,7 @@ class Method(Enum):
     GET = "GET"
 
 
+
 def generate_client_order_id():
     return str(uuid.uuid4())
 
@@ -265,3 +266,7 @@ def movePortfolioFunds(value, currencySymbol, source_portfolio_uuid, target_port
         '/api/v3/brokerage/portfolios/move_funds',
         payload
     )
+
+def getPortfolioBreakdown(portfolio_uuid):
+    return cb_auth(Method.GET.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
+
