@@ -248,7 +248,7 @@ def listAccounts(limit=49, cursor=None):
 def listPortfolios(portfolio_type="UNDEFINED"):
     return cb_auth(Method.GET.value, '/api/v3/brokerage/portfolios', {'portfolio_type':portfolio_type})
 
-def createOrder(name):
+def createPortfolio(name):
     # print("Payload being sent to server:", payload)  # For debugging
     return cb_auth(Method.POST.value, '/api/v3/brokerage/portfolios', {"name":name})
 
@@ -272,6 +272,7 @@ def getPortfolioBreakdown(portfolio_uuid):
     return cb_auth(Method.GET.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
 
 def deletePortfolio(portfolio_uuid):
-    # print("Payload being sent to server:", payload)  # For debugging
     return cb_auth(Method.DELETE.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
 
+def editPortfolio(portfolio_uuid):
+    return cb_auth(Method.POST.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
