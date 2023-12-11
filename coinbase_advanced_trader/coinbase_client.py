@@ -2,7 +2,7 @@ from enum import Enum
 from datetime import datetime
 import uuid
 import json
-from coinbase_advanced_trader.cb_auth import CBAuth
+from cb_auth import CBAuth
 
 # Initialize the single instance of CBAuth
 cb_auth = CBAuth()
@@ -193,7 +193,7 @@ def getProductCandles(product_id, start, end, granularity):
         'end': end,
         'granularity': granularity
     }
-    return cb_auth(Method.GET.value, f'/api/v3/brokerage/products/{product_id}/candles', params)
+    return cb_auth(Method.GET.value, f'/api/v3/brokerage/products/{product_id}/candles', params=params)
 
 
 def getMarketTrades(product_id, limit):
