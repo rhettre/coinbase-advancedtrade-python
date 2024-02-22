@@ -1,10 +1,10 @@
 import http.client
-import hmac
-import hashlib
 import json
-import time
 from urllib.parse import urlencode
 from typing import Union, Dict
+import jwt
+from cryptography.hazmat.primitives import serialization
+import time
 
 
 class CBAuth:
@@ -41,43 +41,64 @@ class CBAuth:
         self.key = api_key
         self.secret = api_secret
 
-    def __call__(self, method: str, path: str, body: Union[Dict, str] = '', params: Dict[str, str] = None) -> Dict:
+    def __call__(
+        self,
+        method: str,
+        path: str,
+        body: Union[Dict, str] = "",
+        params: Dict[str, str] = None,
+    ) -> Dict:
         """
         Prepare and send an authenticated request to the Coinbase API.
 
-        :param method: HTTP method (e.g., 'GET', 'POST')
+        :param method: HTTP method (e.g., 'GET', 'POST', 'PUT', 'DELETE)
         :param path: API endpoint path
         :param body: Request payload
         :param params: URL parameters
         :return: Response from the Coinbase API as a dictionary
         """
-        path = self.add_query_params(path, params)
+        request_path = self.add_query_params(path, params)
         body_encoded = self.prepare_body(body)
-        headers = self.create_headers(method, path, body)
+
+        uri = f"{method} api.coinbase.com{request_path}"
+        jwt_token = self.build_jwt("retail_rest_api_proxy",uri)
+
+        headers = {"Authorization": f"Bearer {jwt_token}"}
+
         return self.send_request(method, path, body_encoded, headers)
 
     def add_query_params(self, path, params):
         if params:
             query_params = urlencode(params)
-            path = f'{path}?{query_params}'
+            path = f"{path}?{query_params}"
         return path
 
     def prepare_body(self, body):
-        return json.dumps(body).encode('utf-8') if body else b''
+        return json.dumps(body).encode("utf-8") if body else b""
 
-    def create_headers(self, method, path, body):
-        timestamp = str(int(time.time()))
-        message = timestamp + method.upper() + \
-            path.split('?')[0] + (json.dumps(body) if body else '')
-        signature = hmac.new(self.secret.encode(
-            'utf-8'), message.encode('utf-8'), digestmod=hashlib.sha256).hexdigest()
+    def build_jwt(self, service, uri):
+        private_key_bytes = self.secret.encode("utf-8")
+        private_key = serialization.load_pem_private_key(
+            private_key_bytes, password=None
+        )
 
-        return {
-            "Content-Type": "application/json",
-            "CB-ACCESS-KEY": self.key,
-            "CB-ACCESS-SIGN": signature,
-            "CB-ACCESS-TIMESTAMP": timestamp
+        jwt_payload = {
+            "sub": self.key,
+            "iss": "coinbase-cloud",
+            "nbf": int(time.time()),
+            "exp": int(time.time()) + 60,
+            "aud": [service],
+            "uri": uri,
         }
+
+        jwt_token = jwt.encode(
+            jwt_payload,
+            private_key,
+            algorithm="ES256",
+            headers={"kid": self.key, "nonce": str(int(time.time()))},
+        )
+
+        return jwt_token
 
     def send_request(self, method, path, body_encoded, headers):
         conn = http.client.HTTPSConnection("api.coinbase.com")
@@ -91,9 +112,13 @@ class CBAuth:
                 return None
 
             response_data = json.loads(data.decode("utf-8"))
-            if 'error_details' in response_data and response_data['error_details'] == 'missing required scopes':
+            if (
+                "error_details" in response_data
+                and response_data["error_details"] == "missing required scopes"
+            ):
                 print(
-                    "Error: Missing Required Scopes. Please update your API Keys to include more permissions.")
+                    "Error: Missing Required Scopes. Please update your API Keys to include more permissions."
+                )
                 return None
 
             return response_data
