@@ -1,5 +1,5 @@
 import os
-from cb_auth import CBAuth
+from coinbase_advanced_trader.cb_auth import CBAuth
 
 API_KEY = None
 API_SECRET = None
