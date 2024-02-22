@@ -16,4 +16,3 @@ tests/__pycache__/
 .vscode/
 test.py
 promptlib/
-coinbase_cloud_api_key.json

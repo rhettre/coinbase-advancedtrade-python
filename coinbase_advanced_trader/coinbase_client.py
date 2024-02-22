@@ -1,4 +1,5 @@
 from enum import Enum
+from datetime import datetime
 import uuid
 import json
 from cb_auth import CBAuth
@@ -15,9 +16,6 @@ class Side(Enum):
 class Method(Enum):
     POST = "POST"
     GET = "GET"
-    DELETE = "DELETE"
-    PUT = "PUT"
-
 
 
 def generate_client_order_id():
@@ -232,86 +230,3 @@ def getTransactionsSummary(start_date, end_date, user_native_currency='USD', pro
         'contract_expiry_type': contract_expiry_type
     }
     return cb_auth(Method.GET.value, '/api/v3/brokerage/transaction_summary', params)
-
-def listPortfolios(portfolio_type="UNDEFINED"):
-    """
-       Get a list of all portfolios of a user.
-
-       This function uses the GET method to retrieve a list of authenticated accounts from the Coinbase Advanced Trade API.
-
-       :param portfolio_type: String (optional) | "UNDEFINED", "DEFAULT", "CONSUMER", "INTX"
-       :return: A dictionary containing the response from the server. A successful response will return a 200 status code. An unexpected error will return a default error response.
-    """
-    return cb_auth(Method.GET.value, '/api/v3/brokerage/portfolios', {'portfolio_type':portfolio_type})
-
-def createPortfolio(name):
-    """
-       Create a portfolio
-
-       This function uses the POST method to create a portfolio within a user account from the Coinbase Advanced Trade API.
-
-       :param name: String : Name of the portfolio
-       :return: A dictionary containing the response from the server. A successful response will return a 200 status code. An unexpected error will return a default error response.
-   """
-    return cb_auth(Method.POST.value, '/api/v3/brokerage/portfolios', {"name":name})
-
-def movePortfolioFunds(value, currencySymbol, source_portfolio_uuid, target_portfolio_uuid):
-    """
-       Transfer funds between portfolios
-
-       This function uses the POST method to move funds from the source portfolio to the target portfolio from the Coinbase Advanced Trade API.
-
-       :param value: String | The value to be moved (i.e. "100")
-       :param currencySymbol: String | The currency symbol (i.e. "BTC", "USD")
-       :param source_portfolio_uuid: String | The uuid of the source portfolio
-       :param target_portfolio_uuid: String | The uuid of the target portfolio
-       :return: A dictionary containing the response from the server. A successful response will return a 200 status code. An unexpected error will return a default error response.
-    """
-    payload = {
-        "funds" : {
-            "value" : value,
-            "currency" : currencySymbol
-        },
-        "source_portfolio_uuid" : source_portfolio_uuid,
-        "target_portfolio_uuid" : target_portfolio_uuid
-    }
-
-    return cb_auth(
-        Method.POST.value,
-        '/api/v3/brokerage/portfolios/move_funds',
-        payload
-    )
-
-def getPortfolioBreakdown(portfolio_uuid):
-    """
-       Get the breakdown of a portfolio by portfolio ID
-
-       This function uses the GET method to retrieve a detailed breakdown of a portfolio from the Coinbase Advanced Trade API.
-
-       :param portfolio_uuid: String : UUID of the desired portfolio
-       :return: A dictionary containing the response from the server. A successful response will return a 200 status code. An unexpected error will return a default error response.
-    """
-    return cb_auth(Method.GET.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
-
-def deletePortfolio(portfolio_uuid):
-    """
-        Delete portfolio by portfolio ID
-
-        This function uses the DELETE method to delete a portfolio from the Coinbase Advanced Trade API.
-
-        :param portfolio_uuid: String : UUID of portfolio
-        :return: A dictionary containing the response from the server. A successful response will return a 200 status code. An unexpected error will return a default error response.
-    """
-    return cb_auth(Method.DELETE.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}')
-
-def editPortfolio(portfolio_uuid, name):
-    """
-        Modify a portfolio name by portfolio ID
-
-        This function uses the PUT method to edit the name of a portfolio within a user account from the Coinbase Advanced Trade API.
-
-        :param portfolio_uuid: String : UUID of portfolio
-        :param name: String : New name of the portfolio
-        :return: A dictionary containing the response from the server. A successful response will return a 200 status code. An unexpected error will return a default error response.
-    """
-    return cb_auth(Method.PUT.value, f'/api/v3/brokerage/portfolios/{portfolio_uuid}', {"name" : name})
