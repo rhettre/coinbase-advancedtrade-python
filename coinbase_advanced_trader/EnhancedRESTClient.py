@@ -1,21 +1,24 @@
 import uuid
-from coinbase.rest import RESTClient
-from coinbase_advanced_trader.config import BUY_PRICE_MULTIPLIER, SELL_PRICE_MULTIPLIER
+from typing import Dict, Any
 from decimal import Decimal, ROUND_HALF_UP
 from enum import Enum
+from coinbase.rest import RESTClient
+from coinbase_advanced_trader.config import BUY_PRICE_MULTIPLIER, SELL_PRICE_MULTIPLIER
+from coinbase_advanced_trader.logger import logger
 
 class Side(Enum):
     BUY = 1
     SELL = 0
 
 class EnhancedRESTClient(RESTClient):
-    def __init__(self, api_key, api_secret, **kwargs):
+    def __init__(self, api_key: str, api_secret: str, **kwargs):
         super().__init__(api_key=api_key, api_secret=api_secret, **kwargs)
+        self.MAKER_FEE_RATE = Decimal('0.004')
 
-    def generate_client_order_id(self):
+    def _generate_client_order_id(self) -> str:
         return str(uuid.uuid4())
 
-    def get_spot_price(self, product_id):
+    def get_spot_price(self, product_id: str) -> Decimal:
         """
         Fetches the current spot price of a specified product.
 
@@ -23,182 +26,139 @@ class EnhancedRESTClient(RESTClient):
             product_id (str): The ID of the product (e.g., "BTC-USD").
 
         Returns:
-            float: The spot price as a float, or None if an error occurs.
+            Decimal: The spot price as a Decimal, or None if an error occurs.
         """
         try:
             response = self.get_product(product_id)
-            # print("Response:", response)  # Log the entire response for debugging
             quote_increment = Decimal(response['quote_increment'])
 
-            # Check whether the 'price' field exists in the response and return it as a float
             if 'price' in response:
                 price = Decimal(response['price'])
-                # Round the price to quote_increment number of digits
-                rounded_price = price.quantize(quote_increment)
-                return rounded_price
+                return price.quantize(quote_increment)
             else:
-                # Print a specific error message if the 'price' field is missing
-                print(f"'price' field missing in response for {product_id}")
+                logger.error(f"'price' field missing in response for {product_id}")
                 return None
 
         except Exception as e:
-            print(f"Error fetching spot price for {product_id}: {e}")
+            logger.error(f"Error fetching spot price for {product_id}: {e}")
             return None
 
-    def calculate_base_size(self, fiat_amount, spot_price, base_increment):
-        print(fiat_amount)
-        fiat_amount_decimal = Decimal(fiat_amount)
-        base_size = (fiat_amount_decimal / Decimal(spot_price) / Decimal(base_increment)).quantize(
-            Decimal('1'), rounding=ROUND_HALF_UP) * Decimal(base_increment)
-        print(base_size)
-        return str(base_size)
+    def _calculate_base_size(self, fiat_amount: Decimal, spot_price: Decimal, base_increment: Decimal) -> Decimal:
+        return ((fiat_amount / spot_price) / base_increment).quantize(Decimal('1'), rounding=ROUND_HALF_UP) * base_increment
 
-    def fiat_market_buy(self, product_id, fiat_amount):
-        #Example: client.fiat_market_buy("BTC-USDC","10")
-        order = self.market_order_buy(self.generate_client_order_id(), product_id, fiat_amount)
-        if order['success']:
-            print(f"Successfully placed a buy order for {fiat_amount} {product_id.split('-')[1]} of {product_id.split('-')[0]}.")
-        else:
-            failure_reason = order.get('failure_reason', '')
-            preview_failure_reason = order.get(
-                'error_response', {}).get('preview_failure_reason', '')
-            print(
-                f"Failed to place a buy order. Reason: {failure_reason}. Preview failure reason: {preview_failure_reason}")
+    def fiat_market_buy(self, product_id: str, fiat_amount: str) -> Dict[str, Any]:
+        """
+        Place a market buy order for a specified fiat amount.
 
-        print("Coinbase response:", order)
+        Args:
+            product_id (str): The ID of the product to buy (e.g., "BTC-USDC").
+            fiat_amount (str): The amount of fiat currency to spend.
+
+        Returns:
+            dict: The order response from Coinbase.
+        """
+        order = self.market_order_buy(self._generate_client_order_id(), product_id, fiat_amount)
+        self._log_order_result(order, product_id, fiat_amount, Side.BUY)
         return order
 
-    def fiat_market_sell(self, product_id, fiat_amount):
-        #Example: client.fiat_market_sell("BTC-USDC","10")
-        base_size = self.calculate_base_size(fiat_amount, self.get_spot_price(product_id), self.get_product(product_id)['base_increment'])
-        order = self.market_order_sell(self.generate_client_order_id(), product_id, base_size)
-        if order['success']:
-            print(f"Successfully placed a sell order for {fiat_amount} {product_id.split('-')[1]} of {product_id.split('-')[0]}.")
-        else:
-            failure_reason = order.get('failure_reason', '')
-            preview_failure_reason = order.get(
-                'error_response', {}).get('preview_failure_reason', '')
-            print(
-                f"Failed to place a sell order. Reason: {failure_reason}. Preview failure reason: {preview_failure_reason}")
+    def fiat_market_sell(self, product_id: str, fiat_amount: str) -> Dict[str, Any]:
+        """
+        Place a market sell order for a specified fiat amount.
 
-        print("Coinbase response:", order)
+        Args:
+            product_id (str): The ID of the product to sell (e.g., "BTC-USDC").
+            fiat_amount (str): The amount of fiat currency to receive.
+
+        Returns:
+            dict: The order response from Coinbase.
+        """
+        spot_price = self.get_spot_price(product_id)
+        base_increment = Decimal(self.get_product(product_id)['base_increment'])
+        base_size = self._calculate_base_size(Decimal(fiat_amount), spot_price, base_increment)
+        
+        order = self.market_order_sell(self._generate_client_order_id(), product_id, str(base_size))
+        self._log_order_result(order, product_id, fiat_amount, Side.SELL)
         return order
 
-    def fiat_limit_buy(self,product_id, fiat_amount, price_multiplier=BUY_PRICE_MULTIPLIER):
+    def fiat_limit_buy(self, product_id: str, fiat_amount: str, price_multiplier: float = BUY_PRICE_MULTIPLIER) -> Dict[str, Any]:
         """
         Places a limit buy order.
 
         Args:
             product_id (str): The ID of the product to buy (e.g., "BTC-USD").
-            fiat_amount (float): The amount in USD or other fiat to spend on buying (ie. $200).
-            price_multiplier (float, optional): Multiplier to apply to the current spot price to get the limit price. Defaults to BUY_PRICE_MULTIPLIER.
+            fiat_amount (str): The amount in fiat currency to spend on buying.
+            price_multiplier (float, optional): Multiplier to apply to the current spot price to get the limit price.
+                                                Defaults to BUY_PRICE_MULTIPLIER.
 
         Returns:
-            dict: The response of the order details.
+            Dict[str, Any]: The response containing order details.
         """
-        # Coinbase maker fee rate
-        maker_fee_rate = Decimal('0.004')
+        return self._place_limit_order(product_id, fiat_amount, price_multiplier, Side.BUY)
 
-        # Fetch product details to get the quote_increment and base_increment
-        product_details = self.get_product(product_id)
-        quote_increment = Decimal(product_details['quote_increment'])
-        base_increment = Decimal(product_details['base_increment'])
-
-        # Fetch the current spot price for the product
-        spot_price = self.get_spot_price(product_id)
-
-        # Calculate the limit price
-        limit_price = Decimal(spot_price) * Decimal(price_multiplier)
-
-        # Round the limit price to the appropriate number of decimal places
-        limit_price = limit_price.quantize(quote_increment)
-
-        # Adjust the fiat_amount for the maker fee
-        effective_fiat_amount = Decimal(fiat_amount) * (1 - maker_fee_rate)
-
-        # Calculate the equivalent amount in the base currency (e.g., BTC) for the given USD amount
-        base_size = effective_fiat_amount / limit_price
-
-        # Round base_size to the nearest allowed increment
-        base_size = (base_size / base_increment).quantize(Decimal('1'),
-                                                        rounding=ROUND_HALF_UP) * base_increment
-
-        order = self.limit_order_gtc_buy(self.generate_client_order_id(),product_id, str(base_size), str(limit_price))
-        # Print a human-readable message
-        if order['success']:
-            base_size = Decimal(
-                order['order_configuration']['limit_limit_gtc']['base_size'])
-            limit_price = Decimal(
-                order['order_configuration']['limit_limit_gtc']['limit_price'])
-            total_amount = base_size * limit_price
-            print(
-                f"Successfully placed a limit buy order for {base_size} {product_id} (${total_amount:.2f}) at a price of {limit_price} USD.")
-        else:
-            print(
-                f"Failed to place a limit buy order. Reason: {order['failure_reason']}")
-
-        print("Coinbase response:", order)
-
-        return order
-
-
-    def fiat_limit_sell(self, product_id, fiat_amount, price_multiplier=SELL_PRICE_MULTIPLIER):
+    def fiat_limit_sell(self, product_id: str, fiat_amount: str, price_multiplier: float = SELL_PRICE_MULTIPLIER) -> Dict[str, Any]:
         """
         Places a limit sell order.
 
         Args:
             product_id (str): The ID of the product to sell (e.g., "BTC-USD").
-            fiat_amount (float): The amount in USD or other fiat to receive from selling (ie. $200).
-            price_multiplier (float, optional): Multiplier to apply to the current spot price to get the limit price. Defaults to SELL_PRICE_MULTIPLIER.
+            fiat_amount (str): The amount in USD or other fiat to receive from selling (e.g., "200").
+            price_multiplier (float, optional): Multiplier to apply to the current spot price to get the limit price.
+                                                Defaults to SELL_PRICE_MULTIPLIER.
 
         Returns:
-            dict: The response of the order details.
+            Dict[str, Any]: The response of the order details.
         """
-        # Coinbase maker fee rate
-        maker_fee_rate = Decimal('0.004')
+        return self._place_limit_order(product_id, fiat_amount, price_multiplier, Side.SELL)
 
-        # Fetch product details to get the quote_increment and base_increment
+    def _place_limit_order(self, product_id: str, fiat_amount: str, price_multiplier: float, side: Side) -> Dict[str, Any]:
         product_details = self.get_product(product_id)
         quote_increment = Decimal(product_details['quote_increment'])
         base_increment = Decimal(product_details['base_increment'])
 
-        # Fetch the current spot price for the product
         spot_price = self.get_spot_price(product_id)
+        limit_price = (Decimal(spot_price) * Decimal(price_multiplier)).quantize(quote_increment)
 
-        # Calculate the limit price
-        limit_price = Decimal(spot_price) * Decimal(price_multiplier)
+        fiat_amount_decimal = Decimal(fiat_amount)
+        effective_fiat_amount = fiat_amount_decimal * (1 - self.MAKER_FEE_RATE) if side == Side.BUY else fiat_amount_decimal / (1 - self.MAKER_FEE_RATE)
+        base_size = (effective_fiat_amount / limit_price).quantize(base_increment, rounding=ROUND_HALF_UP)
 
-        # Round the limit price to the appropriate number of decimal places
-        limit_price = limit_price.quantize(quote_increment)
+        order_func = self.limit_order_gtc_buy if side == Side.BUY else self.limit_order_gtc_sell
+        order = order_func(
+            self._generate_client_order_id(),
+            product_id,
+            str(base_size),
+            str(limit_price)
+        )
 
-        # Adjust the fiat_amount for the maker fee
-        effective_fiat_amount = Decimal(fiat_amount) / (1 - maker_fee_rate)
-
-        # Calculate the equivalent amount in the base currency (e.g., BTC) for the given USD amount
-        base_size = effective_fiat_amount / limit_price
-
-        # Round base_size to the nearest allowed increment
-        base_size = (base_size / base_increment).quantize(Decimal('1'),
-                                                        rounding=ROUND_HALF_UP) * base_increment
-
-        order = self.limit_order_gtc_sell(self.generate_client_order_id(),product_id, str(base_size), str(limit_price))
-
-        # Print a human-readable message
-        if order['success']:
-            base_size = Decimal(
-                order['order_configuration']['limit_limit_gtc']['base_size'])
-            limit_price = Decimal(
-                order['order_configuration']['limit_limit_gtc']['limit_price'])
-            total_amount = base_size * limit_price
-            print(
-                f"Successfully placed a limit sell order for {base_size} {product_id} (${total_amount:.2f}) at a price of {limit_price} USD.")
-        else:
-            print(
-                f"Failed to place a limit sell order. Reason: {order['failure_reason']}")
-
-        print("Coinbase response:", order)
+        self._log_order_result(order, product_id, base_size, limit_price, side)
 
         return order
 
+    def _log_order_result(self, order: Dict[str, Any], product_id: str, amount: Any, price: Any = None, side: Side = None) -> None:
+        """
+        Log the result of an order.
 
-   
+        Args:
+            order (Dict[str, Any]): The order response from Coinbase.
+            product_id (str): The ID of the product.
+            amount (Any): The amount of the order.
+            price (Any, optional): The price of the order (for limit orders).
+            side (Side, optional): The side of the order (buy or sell).
+        """
+        base_currency, quote_currency = product_id.split('-')
+        order_type = "limit" if price else "market"
+        side_str = side.name.lower() if side else "unknown"
+
+        if order['success']:
+            if price:
+                total_amount = Decimal(amount) * Decimal(price)
+                logger.info(f"Successfully placed a {order_type} {side_str} order for {amount} {base_currency} "
+                            f"(${total_amount:.2f}) at a price of {price} {quote_currency}.")
+            else:
+                logger.info(f"Successfully placed a {order_type} {side_str} order for {amount} {quote_currency} of {base_currency}.")
+        else:
+            failure_reason = order.get('failure_reason', 'Unknown')
+            preview_failure_reason = order.get('error_response', {}).get('preview_failure_reason', 'Unknown')
+            logger.error(f"Failed to place a {order_type} {side_str} order. Reason: {failure_reason}. Preview failure reason: {preview_failure_reason}")
+        
+        logger.debug(f"Coinbase response: {order}")
