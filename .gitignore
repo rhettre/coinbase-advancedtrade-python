@@ -16,3 +16,4 @@ tests/__pycache__/
 .vscode/
 test.py
 promptlib/
+coinbase_advanced_trader.log
