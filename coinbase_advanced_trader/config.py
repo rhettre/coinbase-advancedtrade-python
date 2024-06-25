@@ -1,5 +1,5 @@
 # Default price multipliers for limit orders
-BUY_PRICE_MULTIPLIER = 0.995
+BUY_PRICE_MULTIPLIER = 0.9995
 SELL_PRICE_MULTIPLIER = 1.005
 
 # Default schedule for the trade_based_on_fgi_simple function
