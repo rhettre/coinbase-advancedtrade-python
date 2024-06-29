@@ -59,7 +59,7 @@ class EnhancedRESTClient(RESTClient):
             dict: The order response from Coinbase.
         """
         order = self.market_order_buy(self._generate_client_order_id(), product_id, fiat_amount)
-        self._log_order_result(order, product_id, fiat_amount, Side.BUY)
+        self._log_order_result(order, product_id, fiat_amount, side=Side.BUY)
         return order
 
     def fiat_market_sell(self, product_id: str, fiat_amount: str) -> Dict[str, Any]:
@@ -78,7 +78,7 @@ class EnhancedRESTClient(RESTClient):
         base_size = self._calculate_base_size(Decimal(fiat_amount), spot_price, base_increment)
         
         order = self.market_order_sell(self._generate_client_order_id(), product_id, str(base_size))
-        self._log_order_result(order, product_id, fiat_amount, Side.SELL)
+        self._log_order_result(order, product_id, fiat_amount, side=Side.SELL)
         return order
 
     def fiat_limit_buy(self, product_id: str, fiat_amount: str, price_multiplier: float = BUY_PRICE_MULTIPLIER) -> Dict[str, Any]:
@@ -138,7 +138,6 @@ class EnhancedRESTClient(RESTClient):
     def _log_order_result(self, order: Dict[str, Any], product_id: str, amount: Any, price: Any = None, side: Side = None) -> None:
         """
         Log the result of an order.
-
         Args:
             order (Dict[str, Any]): The order response from Coinbase.
             product_id (str): The ID of the product.
@@ -154,14 +153,13 @@ class EnhancedRESTClient(RESTClient):
             if price:
                 total_amount = Decimal(amount) * Decimal(price)
                 logger.info(f"Successfully placed a {order_type} {side_str} order for {amount} {base_currency} "
-                            f"(${total_amount:.2f}) at a price of {price} {quote_currency}.")
+                        f"(${total_amount:.2f}) at a price of {price} {quote_currency}.")
             else:
                 logger.info(f"Successfully placed a {order_type} {side_str} order for {amount} {quote_currency} of {base_currency}.")
         else:
             failure_reason = order.get('failure_reason', 'Unknown')
             preview_failure_reason = order.get('error_response', {}).get('preview_failure_reason', 'Unknown')
             logger.error(f"Failed to place a {order_type} {side_str} order. Reason: {failure_reason}. Preview failure reason: {preview_failure_reason}")
-        
         logger.debug(f"Coinbase response: {order}")
 
     def get_fear_and_greed_index(self):
