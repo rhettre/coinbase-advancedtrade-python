@@ -1,9 +1,10 @@
 import logging
 import sys
+from coinbase_advanced_trader.config import LOG_FILE_PATH, LOG_LEVEL
 
 def setup_logger():
     logger = logging.getLogger('coinbase_advanced_trader')
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(getattr(logging, LOG_LEVEL))
 
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
@@ -12,7 +13,7 @@ def setup_logger():
     console_handler.setFormatter(console_formatter)
 
     # File handler
-    file_handler = logging.FileHandler('coinbase_advanced_trader.log')
+    file_handler = logging.FileHandler(LOG_FILE_PATH)
     file_handler.setLevel(logging.DEBUG)
     file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
     file_handler.setFormatter(file_formatter)
