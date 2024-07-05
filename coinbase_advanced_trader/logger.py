@@ -2,10 +2,10 @@ import logging
 import sys
 from coinbase_advanced_trader.config import config_manager
 
-LOG_FILE_PATH = config_manager.get('LOG_FILE_PATH')
-LOG_LEVEL = config_manager.get('LOG_LEVEL')
-
 def setup_logger():
+    LOG_FILE_PATH = config_manager.get('LOG_FILE_PATH')
+    LOG_LEVEL = config_manager.get('LOG_LEVEL')
+
     logger = logging.getLogger('coinbase_advanced_trader')
     logger.setLevel(getattr(logging, LOG_LEVEL))
 

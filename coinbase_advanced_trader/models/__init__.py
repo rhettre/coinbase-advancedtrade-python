@@ -1,3 +1,5 @@
+"""Models package for Coinbase Advanced Trader."""
+
 from .order import Order, OrderSide, OrderType
 from .product import Product
 
