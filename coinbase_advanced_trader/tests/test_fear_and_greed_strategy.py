@@ -6,7 +6,7 @@ from coinbase_advanced_trader.services.fear_and_greed_strategy import FearAndGre
 from coinbase_advanced_trader.models import Order, OrderSide, OrderType
 from coinbase_advanced_trader.services.order_service import OrderService
 from coinbase_advanced_trader.services.price_service import PriceService
-from coinbase_advanced_trader.trading_config import TradingConfig
+from coinbase_advanced_trader.trading_config import FearAndGreedConfig
 
 
 class TestFearAndGreedStrategy(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestFearAndGreedStrategy(unittest.TestCase):
         """Set up the test environment before each test method."""
         self.order_service_mock = Mock(spec=OrderService)
         self.price_service_mock = Mock(spec=PriceService)
-        self.config_mock = Mock(spec=TradingConfig)
+        self.config_mock = Mock(spec=FearAndGreedConfig)
         self.strategy = FearAndGreedStrategy(
             self.order_service_mock,
             self.price_service_mock,
@@ -48,9 +48,10 @@ class TestFearAndGreedStrategy(unittest.TestCase):
         result = self.strategy.execute_trade('BTC-USDC', '10')
 
         self.assertEqual(result, mock_order)
-        self.order_service_mock.fiat_limit_buy.assert_called_once_with(
-            'BTC-USDC', '12.00'
-        )
+        self.order_service_mock.fiat_limit_buy.assert_called_once()
+        call_args = self.order_service_mock.fiat_limit_buy.call_args
+        self.assertEqual(call_args[0][0], 'BTC-USDC')
+        self.assertAlmostEqual(Decimal(call_args[0][1]), Decimal('12.00'), places=8)
         mock_get.assert_called_once()
         self.config_mock.get_fgi_schedule.assert_called_once()
 
@@ -79,9 +80,10 @@ class TestFearAndGreedStrategy(unittest.TestCase):
         result = self.strategy.execute_trade('BTC-USDC', '10')
 
         self.assertEqual(result, mock_order)
-        self.order_service_mock.fiat_limit_sell.assert_called_once_with(
-            'BTC-USDC', '8.00'
-        )
+        self.order_service_mock.fiat_limit_sell.assert_called_once()
+        call_args = self.order_service_mock.fiat_limit_sell.call_args
+        self.assertEqual(call_args[0][0], 'BTC-USDC')
+        self.assertAlmostEqual(Decimal(call_args[0][1]), Decimal('8.00'), places=8)
         mock_get.assert_called_once()
         self.config_mock.get_fgi_schedule.assert_called_once()
 

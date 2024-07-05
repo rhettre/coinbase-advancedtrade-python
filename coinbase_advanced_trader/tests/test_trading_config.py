@@ -1,5 +1,5 @@
 import unittest
-from coinbase_advanced_trader.trading_config import TradingConfig
+from coinbase_advanced_trader.trading_config import FearAndGreedConfig
 
 
 class TestTradingConfig(unittest.TestCase):
@@ -7,7 +7,7 @@ class TestTradingConfig(unittest.TestCase):
 
     def setUp(self):
         """Set up the test environment before each test method."""
-        self.config = TradingConfig()
+        self.config = FearAndGreedConfig()
 
     def test_fgi_schedule_initial_state(self):
         """Test the initial state of the Fear and Greed Index schedule."""

@@ -1,3 +1,5 @@
+"""Constants and default configuration for the Coinbase Advanced Trader."""
+
 DEFAULT_CONFIG = {
     'BUY_PRICE_MULTIPLIER': 0.9995,
     'SELL_PRICE_MULTIPLIER': 1.005,

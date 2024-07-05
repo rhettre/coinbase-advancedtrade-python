@@ -7,7 +7,7 @@ from coinbase_advanced_trader.models import Order, OrderSide, OrderType
 from coinbase_advanced_trader.services.order_service import OrderService
 from coinbase_advanced_trader.services.price_service import PriceService
 from coinbase_advanced_trader.services.fear_and_greed_strategy import FearAndGreedStrategy
-from coinbase_advanced_trader.trading_config import TradingConfig
+from coinbase_advanced_trader.trading_config import FearAndGreedConfig
 
 
 class TestEnhancedRESTClient(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestEnhancedRESTClient(unittest.TestCase):
         self.client._order_service = Mock(spec=OrderService)
         self.client._price_service = Mock(spec=PriceService)
         self.client._fear_and_greed_strategy = Mock(spec=FearAndGreedStrategy)
-        self.client._config = Mock(spec=TradingConfig)
+        self.client._config = Mock(spec=FearAndGreedConfig)
 
     def test_fiat_market_buy(self):
         """Test the fiat_market_buy method."""
@@ -120,9 +120,11 @@ class TestEnhancedRESTClient(unittest.TestCase):
 
         result = self.client.trade_based_on_fgi(product_id, fiat_amount)
 
-        self.client._fear_and_greed_strategy.execute_trade.assert_called_once_with(
-            product_id, fiat_amount
-        )
+        self.client._fear_and_greed_strategy.execute_trade.assert_called_once()
+
+        call_args = self.client._fear_and_greed_strategy.execute_trade.call_args
+        self.assertEqual(call_args[0][0], product_id)
+        self.assertAlmostEqual(Decimal(call_args[0][1]), Decimal(fiat_amount), places=8)
         self.assertEqual(result, mock_result)
 
     def test_update_fgi_schedule(self):

@@ -5,8 +5,8 @@ from coinbase.rest import RESTClient
 from .services.order_service import OrderService
 from .services.fear_and_greed_strategy import FearAndGreedStrategy
 from .services.price_service import PriceService
-from coinbase_advanced_trader.trading_config import BUY_PRICE_MULTIPLIER, SELL_PRICE_MULTIPLIER
-from .trading_config import TradingConfig
+from .trading_config import FearAndGreedConfig
+from coinbase_advanced_trader.constants import DEFAULT_CONFIG
 from coinbase_advanced_trader.logger import logger
 
 
@@ -25,23 +25,23 @@ class EnhancedRESTClient(RESTClient):
         super().__init__(api_key=api_key, api_secret=api_secret, **kwargs)
         self._price_service = PriceService(self)
         self._order_service = OrderService(self, self._price_service)
-        self._config = TradingConfig()
+        self._config = FearAndGreedConfig()
         self._fear_and_greed_strategy = FearAndGreedStrategy(
             self._order_service, self._price_service, self._config
         )
 
-    def update_fgi_schedule(self, new_schedule):
+    def update_fgi_schedule(self, new_schedule: List[Dict[str, Any]]) -> bool:
         """
         Update the Fear and Greed Index trading schedule.
 
         Args:
-            new_schedule (List[Dict]): The new schedule to be set.
-
-        Raises:
-            ValueError: If the provided schedule is invalid.
+            new_schedule: The new schedule to be set.
 
         Returns:
             bool: True if the schedule was successfully updated, False otherwise.
+
+        Raises:
+            ValueError: If the provided schedule is invalid.
 
         Example:
             >>> client = EnhancedRESTClient(api_key, api_secret)
@@ -52,14 +52,14 @@ class EnhancedRESTClient(RESTClient):
             >>> client.update_fgi_schedule(new_schedule)
             True
         """
+        if not self._config.validate_schedule(new_schedule):
+            logger.warning("Invalid FGI schedule provided. Update rejected.")
+            return False
+
         try:
-            if self._config.validate_schedule(new_schedule):
-                self._config.update_fgi_schedule(new_schedule)
-                logger.info("FGI schedule successfully updated.")
-                return True
-            else:
-                logger.warning("Invalid FGI schedule provided. Update rejected.")
-                return False
+            self._config.update_fgi_schedule(new_schedule)
+            logger.info("FGI schedule successfully updated.")
+            return True
         except ValueError as e:
             logger.error(f"Failed to update FGI schedule: {str(e)}")
             raise
@@ -78,7 +78,7 @@ class EnhancedRESTClient(RESTClient):
         Validate a Fear and Greed Index trading schedule without updating it.
 
         Args:
-            schedule (List[Dict[str, Any]]): The schedule to validate.
+            schedule: The schedule to validate.
 
         Returns:
             bool: True if the schedule is valid, False otherwise.
@@ -124,7 +124,7 @@ class EnhancedRESTClient(RESTClient):
         self,
         product_id: str,
         fiat_amount: str,
-        price_multiplier: float = BUY_PRICE_MULTIPLIER
+        price_multiplier: float = DEFAULT_CONFIG['BUY_PRICE_MULTIPLIER']
     ) -> Dict[str, Any]:
         """
         Place a limit buy order with fiat currency.
@@ -145,7 +145,7 @@ class EnhancedRESTClient(RESTClient):
         self,
         product_id: str,
         fiat_amount: str,
-        price_multiplier: float = SELL_PRICE_MULTIPLIER
+        price_multiplier: float = DEFAULT_CONFIG['SELL_PRICE_MULTIPLIER']
     ) -> Dict[str, Any]:
         """
         Place a limit sell order with fiat currency.
@@ -166,7 +166,7 @@ class EnhancedRESTClient(RESTClient):
         self,
         product_id: str,
         fiat_amount: str,
-        schedule: Optional[str] = None
+        schedule: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """
         Execute a complex trade based on the Fear and Greed Index.
