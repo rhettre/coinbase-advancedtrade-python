@@ -1,5 +1,5 @@
 from .order_service import OrderService
 from .price_service import PriceService
-from .trading_strategy_service import TradingStrategyService
+from .trading_strategy_service import BaseTradingStrategy  
 
-__all__ = ['OrderService', 'PriceService', 'TradingStrategyService']
+__all__ = ['OrderService', 'PriceService', 'BaseTradingStrategy']

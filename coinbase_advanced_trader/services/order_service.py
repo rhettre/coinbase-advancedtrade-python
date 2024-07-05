@@ -3,7 +3,7 @@ from decimal import Decimal
 import uuid
 from coinbase.rest import RESTClient
 from coinbase_advanced_trader.models import Order, OrderSide, OrderType
-from coinbase_advanced_trader.config import BUY_PRICE_MULTIPLIER, SELL_PRICE_MULTIPLIER
+from coinbase_advanced_trader.trading_config import BUY_PRICE_MULTIPLIER, SELL_PRICE_MULTIPLIER
 from coinbase_advanced_trader.logger import logger
 from coinbase_advanced_trader.utils import calculate_base_size
 from .price_service import PriceService
