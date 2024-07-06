@@ -1,2 +1,3 @@
-requests
 coinbase-advanced-py
+requests
+urllib3
