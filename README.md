@@ -6,7 +6,7 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 
 - Easy-to-use Python wrapper for the Coinbase Advanced Trade API
 - Supports the new Coinbase Cloud authentication method
-- Built on top of the official Coinbase Python SDK for improved stability
+- Built on top of the official [Coinbase Python SDK](https://github.com/coinbase/coinbase-advanced-py) for improved stability
 - Supports all endpoints and methods provided by the official API
 - Added support for trading strategies covered on the [YouTube channel](https://rhett.blog/youtube)
 
