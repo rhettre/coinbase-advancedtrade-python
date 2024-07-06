@@ -1,6 +1,6 @@
 # Coinbase Advanced Trade API Python Client
 
-This is an unofficial Python client for the Coinbase Advanced Trade API. It allows users to interact with the API to manage their cryptocurrency trading activities on the Coinbase platform.
+This is the unofficial Python client for the Coinbase Advanced Trade API. It allows users to interact with the API to manage their cryptocurrency trading activities on the Coinbase platform.
 
 ## Features
 
