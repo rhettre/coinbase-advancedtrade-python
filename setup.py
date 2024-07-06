@@ -8,7 +8,7 @@ with open("requirements.txt") as f:
 
 setup(
     name='coinbase-advancedtrade-python',
-    version='0.1.7',
+    version='0.2.0',
     description='The unofficial Python client for the Coinbase Advanced Trade API',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -20,7 +20,7 @@ setup(
     install_requires=requirements,
     keywords=['gdax', 'gdax-api', 'cbpro', 'cbpro-api', 'orderbook', 'trade', 'bitcoin', 'ethereum', 'BTC', 'ETH',
               'client', 'api', 'wrapper', 'exchange', 'crypto', 'currency', 'trading', 'trading-api', 'coinbase',
-              'advanced-trade', 'prime', 'coinbaseadvancedtrade', 'coinbase-advanced-trade'],
+              'advanced-trade', 'prime', 'coinbaseadvancedtrade', 'coinbase-advanced-trade','fear-and-greed-index'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
@@ -33,5 +33,7 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
     ],
 )
