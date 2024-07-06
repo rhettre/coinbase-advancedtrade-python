@@ -1,6 +1,6 @@
 import requests
-from coinbase_advanced_trader.strategies.limit_order_strategies import fiat_limit_buy, fiat_limit_sell
-from ..config import SIMPLE_SCHEDULE, PRO_SCHEDULE
+from coinbase_advanced_trader.legacy.strategies.limit_order_strategies import fiat_limit_buy, fiat_limit_sell
+from ..legacy_config import SIMPLE_SCHEDULE, PRO_SCHEDULE
 
 
 def get_fear_and_greed_index():

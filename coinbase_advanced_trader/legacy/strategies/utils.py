@@ -1,5 +1,5 @@
-from coinbase_advanced_trader.cb_auth import CBAuth
-import coinbase_advanced_trader.coinbase_client as client
+from coinbase_advanced_trader.legacy.cb_auth import CBAuth
+import coinbase_advanced_trader.legacy.coinbase_client as client
 from decimal import Decimal
 
 # Get the singleton instance of CBAuth

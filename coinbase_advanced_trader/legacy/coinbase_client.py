@@ -1,8 +1,7 @@
 from enum import Enum
-from datetime import datetime
 import uuid
 import json
-from cb_auth import CBAuth
+from coinbase_advanced_trader.legacy.cb_auth import CBAuth
 
 # Initialize the single instance of CBAuth
 cb_auth = CBAuth()

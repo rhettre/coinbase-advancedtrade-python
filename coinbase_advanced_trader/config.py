@@ -1,52 +1,51 @@
-import os
-from coinbase_advanced_trader.cb_auth import CBAuth
+"""Configuration management for Coinbase Advanced Trader."""
 
-API_KEY = None
-API_SECRET = None
+import logging
+from pathlib import Path
 
-# Default price multipliers for limit orders
-BUY_PRICE_MULTIPLIER = 0.995
-SELL_PRICE_MULTIPLIER = 1.005
+import yaml
 
-# Default schedule for the trade_based_on_fgi_simple function
-SIMPLE_SCHEDULE = [
-    {'threshold': 20, 'factor': 1.2, 'action': 'buy'},
-    {'threshold': 80, 'factor': 0.8, 'action': 'sell'}
-]
-
-# Default schedule for the trade_based_on_fgi_pro function
-PRO_SCHEDULE = [
-    {'threshold': 10, 'factor': 1.5, 'action': 'buy'},
-    {'threshold': 20, 'factor': 1.3, 'action': 'buy'},
-    {'threshold': 30, 'factor': 1.1, 'action': 'buy'},
-    {'threshold': 70, 'factor': 0.9, 'action': 'sell'},
-    {'threshold': 80, 'factor': 0.7, 'action': 'sell'},
-    {'threshold': 90, 'factor': 0.5, 'action': 'sell'}
-]
+from coinbase_advanced_trader.constants import DEFAULT_CONFIG
 
 
-def set_api_credentials(api_key=None, api_secret=None):
-    global API_KEY
-    global API_SECRET
+class ConfigManager:
+    """Singleton class for managing application configuration."""
 
-    # Option 1: Use provided arguments
-    if api_key and api_secret:
-        API_KEY = api_key
-        API_SECRET = api_secret
+    _instance = None
 
-    # Option 2: Use environment variables
-    elif 'COINBASE_API_KEY' in os.environ and 'COINBASE_API_SECRET' in os.environ:
-        API_KEY = os.environ['COINBASE_API_KEY']
-        API_SECRET = os.environ['COINBASE_API_SECRET']
+    def __new__(cls):
+        """Create a new instance if one doesn't exist, otherwise return the existing instance."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.initialize()
+        return cls._instance
 
-    # Option 3: Load from a separate file (e.g., keys.txt)
-    else:
-        try:
-            with open('keys.txt', 'r') as f:
-                API_KEY = f.readline().strip()
-                API_SECRET = f.readline().strip()
-        except FileNotFoundError:
-            print("Error: API keys not found. Please set your API keys.")
+    def initialize(self):
+        """Initialize the ConfigManager with default configuration and user overrides."""
+        self.config_path = Path('config.yaml')
+        self.config = self._load_config()
 
-    # Update the CBAuth singleton instance with the new credentials
-    CBAuth().set_credentials(API_KEY, API_SECRET)
+    def _load_config(self):
+        """Load configuration from file, falling back to defaults if necessary."""
+        config = DEFAULT_CONFIG.copy()
+        if self.config_path.exists():
+            try:
+                with open(self.config_path, 'r') as f:
+                    user_config = yaml.safe_load(f)
+                if user_config:
+                    config.update(user_config)
+            except Exception as e:
+                logging.error(f"Error loading user config: {e}")
+        return config
+
+    def get(self, key, default=None):
+        """Retrieve a configuration value by key, with an optional default."""
+        return self.config.get(key, default)
+
+    @classmethod
+    def reset(cls):
+        """Reset the singleton instance."""
+        cls._instance = None
+
+
+config_manager = ConfigManager()

@@ -1,15 +1,15 @@
 import unittest
 from unittest.mock import patch
 from decimal import Decimal
-from coinbase_advanced_trader.strategies.limit_order_strategies import fiat_limit_buy, fiat_limit_sell
+from coinbase_advanced_trader.legacy.strategies.limit_order_strategies import fiat_limit_buy, fiat_limit_sell
 
 
 class TestLimitOrderStrategies(unittest.TestCase):
 
-    @patch('coinbase_advanced_trader.strategies.limit_order_strategies.getProduct')
-    @patch('coinbase_advanced_trader.strategies.limit_order_strategies.get_spot_price')
-    @patch('coinbase_advanced_trader.strategies.limit_order_strategies.createOrder')
-    @patch('coinbase_advanced_trader.strategies.limit_order_strategies.generate_client_order_id')
+    @patch('coinbase_advanced_trader.legacy.strategies.limit_order_strategies.getProduct')
+    @patch('coinbase_advanced_trader.legacy.strategies.limit_order_strategies.get_spot_price')
+    @patch('coinbase_advanced_trader.legacy.strategies.limit_order_strategies.createOrder')
+    @patch('coinbase_advanced_trader.legacy.strategies.limit_order_strategies.generate_client_order_id')
     def test_fiat_limit_buy(self, mock_generate_client_order_id, mock_createOrder, mock_get_spot_price, mock_getProduct):
         # Mock the dependencies
         mock_getProduct.return_value = {
@@ -22,10 +22,10 @@ class TestLimitOrderStrategies(unittest.TestCase):
         result = fiat_limit_buy("BTC-USD", 200)
         self.assertEqual(result['result'], 'success')
 
-    @patch('coinbase_advanced_trader.strategies.limit_order_strategies.getProduct')
-    @patch('coinbase_advanced_trader.strategies.limit_order_strategies.get_spot_price')
-    @patch('coinbase_advanced_trader.strategies.limit_order_strategies.createOrder')
-    @patch('coinbase_advanced_trader.strategies.limit_order_strategies.generate_client_order_id')
+    @patch('coinbase_advanced_trader.legacy.strategies.limit_order_strategies.getProduct')
+    @patch('coinbase_advanced_trader.legacy.strategies.limit_order_strategies.get_spot_price')
+    @patch('coinbase_advanced_trader.legacy.strategies.limit_order_strategies.createOrder')
+    @patch('coinbase_advanced_trader.legacy.strategies.limit_order_strategies.generate_client_order_id')
     def test_fiat_limit_sell(self, mock_generate_client_order_id, mock_createOrder, mock_get_spot_price, mock_getProduct):
         # Mock the dependencies
         mock_getProduct.return_value = {

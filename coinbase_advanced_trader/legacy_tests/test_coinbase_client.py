@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 from datetime import datetime
-from coinbase_advanced_trader.coinbase_client import (
+from coinbase_advanced_trader.legacy.coinbase_client import (
     Method,
     listAccounts,
     getAccount,

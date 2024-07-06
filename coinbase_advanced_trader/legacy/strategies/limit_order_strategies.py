@@ -1,8 +1,8 @@
 from decimal import Decimal, ROUND_HALF_UP
 from .utils import get_spot_price
-from coinbase_advanced_trader.cb_auth import CBAuth
-from coinbase_advanced_trader.config import BUY_PRICE_MULTIPLIER, SELL_PRICE_MULTIPLIER
-from coinbase_advanced_trader.coinbase_client import createOrder, generate_client_order_id, Side, getProduct
+from coinbase_advanced_trader.legacy.cb_auth import CBAuth
+from coinbase_advanced_trader.legacy.legacy_config import BUY_PRICE_MULTIPLIER, SELL_PRICE_MULTIPLIER
+from coinbase_advanced_trader.legacy.coinbase_client import createOrder, generate_client_order_id, Side, getProduct
 
 # Initialize the single instance of CBAuth
 cb_auth = CBAuth()

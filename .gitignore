@@ -9,6 +9,7 @@ dist/
 venv/
 *log.txt
 coinbase_advanced_trader/__pycache__/
+coinbase_advanced_trader/legacy/__pycache__/
 .cache/
 .coverage
 tests/__pycache__/
@@ -16,3 +17,5 @@ tests/__pycache__/
 .vscode/
 test.py
 promptlib/
+*.log
+.github/workflows
