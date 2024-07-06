@@ -18,6 +18,7 @@ setup(
     url='https://github.com/rhettre/coinbase-advancedtrade-python',
     packages=find_packages(),
     install_requires=requirements,
+    include_package_data=True,
     keywords=['gdax', 'gdax-api', 'cbpro', 'cbpro-api', 'orderbook', 'trade', 'bitcoin', 'ethereum', 'BTC', 'ETH',
               'client', 'api', 'wrapper', 'exchange', 'crypto', 'currency', 'trading', 'trading-api', 'coinbase',
               'advanced-trade', 'prime', 'coinbaseadvancedtrade', 'coinbase-advanced-trade','fear-and-greed-index'],
