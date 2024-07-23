@@ -25,7 +25,9 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 
 ## Authentication
 
-Here's an example of how to authenticate using the new method:```python
+Here's an example of how to authenticate using the new method:
+
+```python
 from coinbase_advanced_trader.enhanced_rest_client import EnhancedRESTClient
 
 api_key = "organizations/{org_id}/apiKeys/{key_id}"
