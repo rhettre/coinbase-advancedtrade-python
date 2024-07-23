@@ -1,3 +1,4 @@
 coinbase-advanced-py
 requests
 urllib3
+PyYAML
