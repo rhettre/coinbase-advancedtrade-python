@@ -1,6 +1,6 @@
 import uuid
 from decimal import Decimal
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from coinbase.rest import RESTClient
 
@@ -130,54 +130,60 @@ class OrderService:
                 logger.error(error_log)
             raise
 
-    def fiat_limit_buy(self, product_id: str, fiat_amount: str, price_multiplier: float = BUY_PRICE_MULTIPLIER) -> Order:
+    def fiat_limit_buy(self, product_id: str, fiat_amount: str, limit_price: Optional[str] = None, price_multiplier: float = BUY_PRICE_MULTIPLIER) -> Order:
         """
         Place a limit buy order for a specified fiat amount.
 
         Args:
             product_id (str): The ID of the product to buy.
             fiat_amount (str): The amount of fiat currency to spend.
-            price_multiplier (float): The multiplier for the current price.
+            limit_price (Optional[str]): The specific limit price for the order (overrides price_multiplier if provided).
+            price_multiplier (float): The multiplier for the current price (used if limit_price is not provided).
 
         Returns:
             Order: The order object containing details about the executed order.
         """
-        return self._place_limit_order(product_id, fiat_amount, price_multiplier, OrderSide.BUY)
+        return self._place_limit_order(product_id, fiat_amount, limit_price, price_multiplier, OrderSide.BUY)
 
-    def fiat_limit_sell(self, product_id: str, fiat_amount: str, price_multiplier: float = SELL_PRICE_MULTIPLIER) -> Order:
+    def fiat_limit_sell(self, product_id: str, fiat_amount: str, limit_price: Optional[str] = None, price_multiplier: float = SELL_PRICE_MULTIPLIER) -> Order:
         """
         Place a limit sell order for a specified fiat amount.
 
         Args:
             product_id (str): The ID of the product to sell.
             fiat_amount (str): The amount of fiat currency to receive.
-            price_multiplier (float): The multiplier for the current price.
+            limit_price (Optional[str]): The specific limit price for the order (overrides price_multiplier if provided).
+            price_multiplier (float): The multiplier for the current price (used if limit_price is not provided).
 
         Returns:
             Order: The order object containing details about the executed order.
         """
-        return self._place_limit_order(product_id, fiat_amount, price_multiplier, OrderSide.SELL)
+        return self._place_limit_order(product_id, fiat_amount, limit_price, price_multiplier, OrderSide.SELL)
     
-    def _place_limit_order(self, product_id: str, fiat_amount: str, price_multiplier: float, side: OrderSide) -> Order:
+    def _place_limit_order(self, product_id: str, fiat_amount: str, limit_price: Optional[str], price_multiplier: float, side: OrderSide) -> Order:
         """
         Place a limit order.
 
         Args:
             product_id (str): The ID of the product.
             fiat_amount (str): The amount of fiat currency.
-            price_multiplier (float): The multiplier for the current price.
+            limit_price (Optional[str]): The specific limit price for the order (overrides price_multiplier if provided).
+            price_multiplier (float): The multiplier for the current price (used if limit_price is not provided).
             side (OrderSide): The side of the order (buy or sell).
 
         Returns:
             Order: The order object containing details about the executed order.
         """
         current_price = self.price_service.get_spot_price(product_id)
-        adjusted_price = current_price * Decimal(price_multiplier)
         product_details = self.price_service.get_product_details(product_id)
         base_increment = Decimal(product_details['base_increment'])
         quote_increment = Decimal(product_details['quote_increment'])
 
-        adjusted_price = adjusted_price.quantize(quote_increment)
+        if limit_price:
+            adjusted_price = Decimal(limit_price).quantize(quote_increment)
+        else:
+            adjusted_price = (current_price * Decimal(price_multiplier)).quantize(quote_increment)
+
         base_size = calculate_base_size(Decimal(fiat_amount), adjusted_price, base_increment)
         base_size = base_size.quantize(base_increment)
 
