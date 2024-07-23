@@ -124,6 +124,7 @@ class EnhancedRESTClient(RESTClient):
         self,
         product_id: str,
         fiat_amount: str,
+        limit_price: Optional[str] = None,
         price_multiplier: float = DEFAULT_CONFIG['BUY_PRICE_MULTIPLIER']
     ) -> Dict[str, Any]:
         """
@@ -132,19 +133,21 @@ class EnhancedRESTClient(RESTClient):
         Args:
             product_id: The product identifier.
             fiat_amount: The amount of fiat currency to spend.
-            price_multiplier: The price multiplier for the limit order.
+            limit_price: The specific limit price for the order.
+            price_multiplier: The price multiplier for the limit order (used if limit_price is None).
 
         Returns:
             The result of the limit buy order.
         """
         return self._order_service.fiat_limit_buy(
-            product_id, fiat_amount, price_multiplier
+            product_id, fiat_amount, limit_price, price_multiplier
         )
 
     def fiat_limit_sell(
         self,
         product_id: str,
         fiat_amount: str,
+        limit_price: Optional[str] = None,
         price_multiplier: float = DEFAULT_CONFIG['SELL_PRICE_MULTIPLIER']
     ) -> Dict[str, Any]:
         """
@@ -153,13 +156,14 @@ class EnhancedRESTClient(RESTClient):
         Args:
             product_id: The product identifier.
             fiat_amount: The amount of fiat currency to receive.
-            price_multiplier: The price multiplier for the limit order.
+            limit_price: The specific limit price for the order.
+            price_multiplier: The price multiplier for the limit order (used if limit_price is None).
 
         Returns:
             The result of the limit sell order.
         """
         return self._order_service.fiat_limit_sell(
-            product_id, fiat_amount, price_multiplier
+            product_id, fiat_amount, limit_price, price_multiplier
         )
 
     def trade_based_on_fgi(

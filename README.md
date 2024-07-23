@@ -25,9 +25,7 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 
 ## Authentication
 
-Here's an example of how to authenticate using the new method:
-
-```python
+Here's an example of how to authenticate using the new method:```python
 from coinbase_advanced_trader.enhanced_rest_client import EnhancedRESTClient
 
 api_key = "organizations/{org_id}/apiKeys/{key_id}"
@@ -38,7 +36,17 @@ client = EnhancedRESTClient(api_key=api_key, api_secret=api_secret)
 
 ## Usage of Strategies
 
-Here's an example of how to use the strategies package to buy $10 worth of Bitcoin:
+The `EnhancedRESTClient` inherits from the Coinbase SDK's `RESTClient`, which means you can use all the functions provided by the official SDK. Here's an example of how to use the `get_product` function:
+
+```python
+product_info = client.get_product(product_id="BTC-USDC")
+
+print(product_info)
+```
+
+## Using Wrapper Strategies
+
+Here's an example of how to use the strategies package to buy $10 worth of Bitcoin. By making assumptions about limit price in [trading_config.py](coinbase_advanced_trader/trading_config.py) we are able to simplify the syntax for making limit orders:
 
 ```python
 from coinbase_advanced_trader.enhanced_rest_client import EnhancedRESTClient
@@ -48,8 +56,23 @@ client = EnhancedRESTClient(api_key=api_key, api_secret=api_secret)
 # Perform a market buy
 client.fiat_market_buy("BTC-USDC", "10")
 
-# Perform a limit buy
+#Place a $10 buy order for BTC-USD near the current spot price of BTC-USDC
 client.fiat_limit_buy("BTC-USDC", "10")
+
+#Place a $10 buy order for BTC-USD at a limit price of $10,000
+client.fiat_limit_buy("BTC-USDC", "10", "10000")
+
+#Place a $10 buy order for BTC-USD at a 10% discount from the current spot price of BTC-USDC
+client.fiat_limit_buy("BTC-USDC", "10", price_multiplier=".90")
+
+#Place a $10 sell order for BTC-USD at a limit price of $100,000
+client.fiat_limit_sell("BTC-USDC", "10", "100000")
+
+#Place a $10 sell order for BTC-USD near the current spot price of BTC-USDC
+client.fiat_limit_sell("BTC-USDC", "5")
+
+#Place a $10 sell order for BTC-USD at a 10% premium to the current spot price of BTC-USDC
+client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1")
 ```
 
 ## Usage of Fear and Greed Index
