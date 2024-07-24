@@ -1,6 +1,7 @@
 """Enhanced REST client for Coinbase Advanced Trading API."""
 
 from typing import Optional, List, Dict, Any
+from decimal import Decimal
 from coinbase.rest import RESTClient
 from .services.order_service import OrderService
 from .services.fear_and_greed_strategy import FearAndGreedStrategy
@@ -8,6 +9,7 @@ from .services.price_service import PriceService
 from .trading_config import FearAndGreedConfig
 from coinbase_advanced_trader.constants import DEFAULT_CONFIG
 from coinbase_advanced_trader.logger import logger
+from coinbase_advanced_trader.services.account_service import AccountService
 
 
 class EnhancedRESTClient(RESTClient):
@@ -23,12 +25,32 @@ class EnhancedRESTClient(RESTClient):
             **kwargs: Additional keyword arguments for RESTClient.
         """
         super().__init__(api_key=api_key, api_secret=api_secret, **kwargs)
+        self._account_service = AccountService(self)
         self._price_service = PriceService(self)
         self._order_service = OrderService(self, self._price_service)
         self._config = FearAndGreedConfig()
         self._fear_and_greed_strategy = FearAndGreedStrategy(
             self._order_service, self._price_service, self._config
         )
+
+    def get_crypto_balance(self, currency: str) -> Decimal:
+        """
+        Get the available balance of a specific cryptocurrency.
+        Args:
+            currency: The currency code (e.g., 'BTC', 'ETH', 'USDC').
+        Returns:
+            The available balance of the specified cryptocurrency.
+        """
+        return self._account_service.get_crypto_balance(currency)
+    
+    def list_held_crypto_balances(self) -> Dict[str, Decimal]:
+        """
+        Get a dictionary of all held cryptocurrencies and their balances.
+        Returns:
+            Dict[str, Decimal]: A dictionary where the key is the currency code
+            and the value is the balance as a Decimal.
+        """
+        return self._account_service.list_held_crypto_balances()
 
     def update_fgi_schedule(self, new_schedule: List[Dict[str, Any]]) -> bool:
         """

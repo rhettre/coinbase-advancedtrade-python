@@ -36,7 +36,7 @@ api_secret = "-----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----\
 client = EnhancedRESTClient(api_key=api_key, api_secret=api_secret)
 ```
 
-## Usage of Strategies
+## Using the Official SDK
 
 The `EnhancedRESTClient` inherits from the Coinbase SDK's `RESTClient`, which means you can use all the functions provided by the official SDK. Here's an example of how to use the `get_product` function:
 
@@ -48,13 +48,9 @@ print(product_info)
 
 ## Using Wrapper Strategies
 
-Here's an example of how to use the strategies package to buy $10 worth of Bitcoin. By making assumptions about limit price in [trading_config.py](coinbase_advanced_trader/trading_config.py) we are able to simplify the syntax for making limit orders:
+Here's an example of how to use the strategies package to buy $10 worth of Bitcoin. By making assumptions about limit price in [trading_config.py](coinbase_advanced_trader/trading_config.py) we are able to simplify the syntax for making orders:
 
 ```python
-from coinbase_advanced_trader.enhanced_rest_client import EnhancedRESTClient
-
-client = EnhancedRESTClient(api_key=api_key, api_secret=api_secret)
-
 # Perform a market buy
 client.fiat_market_buy("BTC-USDC", "10")
 
@@ -77,18 +73,36 @@ client.fiat_limit_sell("BTC-USDC", "5")
 client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1")
 ```
 
-## Usage of Fear and Greed Index
+### Account Balance Operations
+
+The `EnhancedRESTClient` provides methods to retrieve account balances for cryptocurrencies. These methods are particularly useful for managing and monitoring your cryptocurrency holdings on Coinbase.
+
+#### Listing All Non-Zero Crypto Balances
+
+To get a dictionary of all cryptocurrencies with non-zero balances in your account:
 
 ```python
-from coinbase_advanced_trader.enhanced_rest_client import EnhancedRESTClient
+balances = client.list_held_crypto_balances()
+print(balances)
+```
 
-client = EnhancedRESTClient(api_key=api_key, api_secret=api_secret)
+#### Getting a Specific Crypto Balance
 
+To get the available balance of a specific cryptocurrency in your account (returns 0 if the specified cryptocurrency is not found in the account):
+
+```python
+balance = client.get_crypto_balance("BTC")
+print(balance)
+```
+
+Note: Both methods use a caching mechanism to reduce API calls. The account data is cached for one hour before a fresh fetch is made from Coinbase.
+
+### Usage of Fear and Greed Index
+
+```python
 # Trade based on Fear and Greed Index
 client.trade_based_on_fgi("BTC-USDC", "10")
 ```
-
-## Advanced Usage
 
 You can also update and retrieve the Fear and Greed Index schedule:
 
