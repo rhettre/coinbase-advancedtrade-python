@@ -28,7 +28,7 @@ jobs:
             --output type=docker \
             -f Dockerfile .
           docker create --name layer_builder lambda-layer-builder:${{ matrix.architecture }}
-          docker cp layer_builder:/asset-output/layer.zip layer-${{ matrix.architecture }}.zip
+          docker cp layer_builder:/tmp/layer.zip layer-${{ matrix.architecture }}.zip
 
       - name: Get Release
         id: get_release
