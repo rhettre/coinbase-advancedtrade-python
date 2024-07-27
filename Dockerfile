@@ -4,12 +4,14 @@ FROM public.ecr.aws/lambda/python:3.9
 # Set up the work directory
 WORKDIR /var/task
 
+# Install necessary build tools
+RUN yum install -y zip gcc python3-devel
+
 # Copy your application code and requirements.txt into the Docker image
 COPY . .
 
 # Install dependencies and create the layer
-RUN yum install -y zip && \
-    pip install --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt && \
     pip install . && \
     mkdir -p /tmp/python && \
@@ -19,9 +21,11 @@ RUN yum install -y zip && \
         --python-version 3.9 \
         --only-binary=:all: --upgrade \
         -r requirements.txt -t /tmp/python && \
+    pip install cffi --no-binary :all: -t /tmp/python && \
     pip install . -t /tmp/python && \
     cd /tmp/python && \
-    zip -r9 /tmp/layer.zip . -x '*.pyc' '*.pyo' && \
+    find . -type d -name "__pycache__" -exec rm -rf {} + && \
+    zip -r9 /tmp/layer.zip . && \
     cd /var/task
 
 # Copy the layer.zip to a known location
