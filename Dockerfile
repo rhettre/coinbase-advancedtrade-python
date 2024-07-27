@@ -2,7 +2,7 @@
 FROM amazonlinux:2023
 
 # Install Python 3.9 and other necessary tools
-RUN dnf install -y python3.8 python3.8-devel gcc zip && \
+RUN dnf install -y python3.9 python3.9-devel gcc zip && \
     dnf clean all
 
 # Set up the work directory
@@ -12,13 +12,13 @@ WORKDIR /root
 COPY . .
 
 # Create a virtual environment and install dependencies
-RUN python3.8 -m venv /root/venv && \
+RUN python3.9 -m venv /root/venv && \
     . /root/venv/bin/activate && \
     pip install --upgrade pip && \
     pip install \
         --platform manylinux2014_x86_64 \
         --implementation cp \
-        --python-version 3.8 \
+        --python-version 3.9 \
         --only-binary=:all: --upgrade \
         -r requirements.txt && \
     pip install . && \
