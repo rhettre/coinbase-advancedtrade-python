@@ -21,6 +21,8 @@ RUN pip install --upgrade pip setuptools wheel && \
         --python-version 3.9 \
         --only-binary=:all: --upgrade \
         -r requirements.txt -t /tmp/python && \
+    pip install cffi --no-binary cffi -t /tmp/python && \
+    pip install cryptography --no-binary cryptography -t /tmp/python && \
     pip install . -t /tmp/python && \
     cd /tmp/python && \
     find . -type d -name "__pycache__" -exec rm -rf {} + && \
