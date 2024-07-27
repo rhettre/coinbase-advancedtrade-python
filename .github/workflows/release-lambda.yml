@@ -25,7 +25,7 @@ jobs:
 
       - name: Build layer.zip
         run: |
-          zip -r9 layer.zip python
+          zip -r layer.zip ./python
 
       - name: Get Release
         id: get_release
