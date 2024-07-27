@@ -12,21 +12,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
+      - name: Build Docker Image
         run: |
-          python -m pip install --upgrade pip
-          mkdir python
-          pip install . --target ./python
-          pip install -r requirements.txt --target ./python
+          docker build -t lambda-layer-builder -f Dockerfile .
 
-      - name: Build layer.zip
+      - name: Create Lambda Layer Zip
         run: |
-          zip -r layer.zip ./python
+          docker run --name layer_builder lambda-layer-builder
+          docker cp layer_builder:/root/layer.zip .
 
       - name: Get Release
         id: get_release
