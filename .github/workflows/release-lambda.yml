@@ -20,11 +20,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt -- target ./python
+          pip install -r coinbase-advancedtrade-python -- target ./python
 
       - name: Build layer.zip
         run: |
-          zip -r layer.zip ./ python
+          zip -r9 layer.zip python
 
       - name: Get Release
         id: get_release
