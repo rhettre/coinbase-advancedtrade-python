@@ -5,7 +5,7 @@ FROM public.ecr.aws/lambda/python:3.9
 WORKDIR /var/task
 
 # Install necessary build tools
-RUN yum install -y zip gcc python3-devel
+RUN yum install -y zip gcc python3-devel libffi-devel
 
 # Copy your application code and requirements.txt into the Docker image
 COPY . .
@@ -21,7 +21,6 @@ RUN pip install --upgrade pip setuptools wheel && \
         --python-version 3.9 \
         --only-binary=:all: --upgrade \
         -r requirements.txt -t /tmp/python && \
-    pip install cffi --no-binary :all: -t /tmp/python && \
     pip install . -t /tmp/python && \
     cd /tmp/python && \
     find . -type d -name "__pycache__" -exec rm -rf {} + && \
