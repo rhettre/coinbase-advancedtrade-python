@@ -7,20 +7,21 @@ WORKDIR /var/task
 # Copy your application code and requirements.txt into the Docker image
 COPY . .
 
-# Install dependencies
+# Install dependencies and create the layer
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt && \
-    pip install .
-
-# Package everything into a ZIP file
-CMD mkdir -p python/lib/python3.9/site-packages && \
+    pip install . && \
+    mkdir -p python/lib/python3.9/site-packages && \
     pip install \
-        --platform manylinux2014_$(uname -m) \
+        --platform manylinux2014_x86_64 \
         --implementation cp \
         --python-version 3.9 \
         --only-binary=:all: --upgrade \
         -r requirements.txt -t python/lib/python3.9/site-packages && \
     pip install . -t python/lib/python3.9/site-packages && \
     cd python/lib/python3.9/site-packages && \
-    zip -r9 /asset-output/layer.zip . && \
+    zip -r9 /tmp/layer.zip . && \
     cd /var/task
+
+# Copy the layer.zip to a known location
+CMD cp /tmp/layer.zip /asset-output/layer.zip
