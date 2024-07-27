@@ -21,7 +21,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           mkdir python
-          pip install coinbase-advancedtrade-python -- target ./python
+          pip install -r coinbase-advancedtrade-python -- target ./python
 
       - name: Build layer.zip
         run: |
