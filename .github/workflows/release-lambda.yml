@@ -8,18 +8,27 @@ on:
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        architecture: [amd64, arm64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Build Docker Image
-        run: |
-          docker build -t lambda-layer-builder -f Dockerfile .
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
 
-      - name: Create Lambda Layer Zip
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build Docker Image and Create Lambda Layer
         run: |
-          docker run --name layer_builder lambda-layer-builder
-          docker cp layer_builder:/root/layer.zip .
+          docker buildx build --platform linux/${{ matrix.architecture }} \
+            -t lambda-layer-builder:${{ matrix.architecture }} \
+            --output type=docker \
+            -f Dockerfile .
+          docker create --name layer_builder lambda-layer-builder:${{ matrix.architecture }}
+          docker cp layer_builder:/asset-output/layer.zip layer-${{ matrix.architecture }}.zip
 
       - name: Get Release
         id: get_release
@@ -40,6 +49,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ./layer.zip
-          asset_name: layer-${{ github.ref_name }}.zip
+          asset_path: ./layer-${{ matrix.architecture }}.zip
+          asset_name: layer-${{ github.ref_name }}-${{ matrix.architecture }}.zip
           asset_content_type: application/zip

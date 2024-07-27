@@ -2,3 +2,5 @@ coinbase-advanced-py
 requests >=2.31.0
 urllib3 >= 2.2.2
 PyYAML >= 6.0.1
+cryptography>=42.0.4
+cffi
