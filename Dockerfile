@@ -11,30 +11,18 @@ WORKDIR /root
 # Copy your application code and requirements.txt into the Docker image
 COPY . .
 
-# Create a virtual environment and install dependencies
-RUN python3.9 -m venv /root/venv && \
-    . /root/venv/bin/activate && \
-    pip install --upgrade pip && \
-    pip install \
-        --platform manylinux2014_x86_64 \
-        --implementation cp \
-        --python-version 3.9 \
-        --only-binary=:all: --upgrade \
-        -r requirements.txt && \
-    pip install . && \
-    deactivate
-
-# Package everything into a ZIP file
-CMD . /root/venv/bin/activate && \
-    mkdir -p python/lib/python3.9/site-packages && \
-    pip install \
+# Install dependencies directly into the Lambda-compatible directory structure
+RUN mkdir -p python/lib/python3.9/site-packages && \
+    python3.9 -m pip install --upgrade pip && \
+    python3.9 -m pip install \
         --platform manylinux2014_x86_64 \
         --implementation cp \
         --python-version 3.9 \
         --only-binary=:all: --upgrade \
         -r requirements.txt -t python/lib/python3.9/site-packages && \
-    pip install . -t python/lib/python3.9/site-packages && \
-    cd python && \
+    python3.9 -m pip install . -t python/lib/python3.9/site-packages
+
+# Package everything into a ZIP file
+CMD cd python && \
     zip -r ../layer.zip . && \
-    cd .. && \
-    deactivate
+    cd ..
