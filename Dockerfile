@@ -1,8 +1,8 @@
 # Use the Amazon Linux 2023 image compatible with AWS Lambda
 FROM amazonlinux:2023
 
-# Install Python 3.9 and ZIP
-RUN dnf install -y python3.9 python3.9-pip zip && \
+# Install Python 3.9, pip, and other necessary tools
+RUN dnf install -y python3.9 python3.9-pip zip python3.9-venv && \
     dnf clean all
 
 # Set up the work directory
@@ -11,10 +11,18 @@ WORKDIR /root
 # Copy your application code and requirements.txt into the Docker image
 COPY . .
 
-# Install application and dependencies into a directory named 'python'
-RUN python3.9 -m pip install --upgrade pip && \
-    python3.9 -m pip install . --target python && \
-    python3.9 -m pip install -r requirements.txt --target python
+# Create and activate a virtual environment, then install dependencies
+RUN python3.9 -m venv /root/venv && \
+    . /root/venv/bin/activate && \
+    pip install --upgrade pip && \
+    pip install . && \
+    pip install -r requirements.txt && \
+    deactivate
 
 # Package everything into a ZIP file
-CMD ["zip", "-r", "layer.zip", "python"]
+CMD . /root/venv/bin/activate && \
+    mkdir python && \
+    pip install . -t python && \
+    pip install -r requirements.txt -t python && \
+    zip -r layer.zip python && \
+    deactivate
