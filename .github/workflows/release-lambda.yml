@@ -20,6 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          mkdir python
           pip install -r coinbase-advancedtrade-python -- target ./python
 
       - name: Build layer.zip
