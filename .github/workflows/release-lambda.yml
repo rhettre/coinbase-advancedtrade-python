@@ -26,18 +26,18 @@ jobs:
         run: |
           zip -r layer.zip ./
 
-      - name: Get Release by Tag
+      - name: Get Release
         id: get_release
-        run: |
-          RELEASE_DATA=$(curl --request GET \
-            --url "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" \
-            --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
-            --header 'accept: application/vnd.github+json')
-          UPLOAD_URL=$(echo $RELEASE_DATA | jq -r .upload_url | sed 's/{?name,label}//')
-          echo "UPLOAD_URL=$UPLOAD_URL"
-          echo "::set-output name=upload_url::$UPLOAD_URL"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const release = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: context.ref.replace('refs/tags/', '')
+            });
+            core.setOutput('upload_url', release.data.upload_url);
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
@@ -46,5 +46,5 @@ jobs:
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: ./layer.zip
-          asset_name: layer.zip
+          asset_name: layer-${{ github.ref_name }}.zip
           asset_content_type: application/zip
