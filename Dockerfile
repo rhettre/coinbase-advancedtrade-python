@@ -1,35 +1,26 @@
 # Use the Amazon Linux 2023 image compatible with AWS Lambda
-FROM amazonlinux:2023
-
-# Install Python 3.9 and other necessary tools
-RUN dnf install -y python3.9 python3.9-devel gcc zip && \
-    dnf clean all
+FROM public.ecr.aws/lambda/python:3.9
 
 # Set up the work directory
-WORKDIR /root
+WORKDIR /var/task
 
 # Copy your application code and requirements.txt into the Docker image
 COPY . .
 
-# Create a virtual environment and install dependencies
-RUN python3.9 -m venv /root/venv && \
-    . /root/venv/bin/activate && \
-    pip install --upgrade pip setuptools wheel && \
+# Install dependencies
+RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt && \
-    pip install . && \
-    deactivate
+    pip install .
 
 # Package everything into a ZIP file
-CMD . /root/venv/bin/activate && \
-    mkdir -p python/lib/python3.9/site-packages && \
+CMD mkdir -p python/lib/python3.9/site-packages && \
     pip install \
-        --platform manylinux2014_x86_64 \
+        --platform manylinux2014_$(uname -m) \
         --implementation cp \
         --python-version 3.9 \
         --only-binary=:all: --upgrade \
         -r requirements.txt -t python/lib/python3.9/site-packages && \
     pip install . -t python/lib/python3.9/site-packages && \
     cd python/lib/python3.9/site-packages && \
-    zip -r9 ../../../../layer.zip . && \
-    cd ../../../../ && \
-    deactivate
+    zip -r9 /asset-output/layer.zip . && \
+    cd /var/task
