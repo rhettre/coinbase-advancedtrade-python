@@ -24,7 +24,7 @@ jobs:
 
       - name: Build layer.zip
         run: |
-          zip -r layer.zip coinbase-advancedtrade-python
+          zip -r layer.zip ./
 
       - name: Create Release
         id: create_release
