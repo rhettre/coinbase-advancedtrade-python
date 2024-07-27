@@ -13,7 +13,6 @@ COPY . .
 
 # Install dependencies directly into the Lambda-compatible directory structure
 RUN mkdir -p python/lib/python3.9/site-packages && \
-    python3.9 -m pip install --upgrade pip && \
     python3.9 -m pip install \
         --platform manylinux2014_x86_64 \
         --implementation cp \
