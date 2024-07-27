@@ -1,5 +1,5 @@
-# Use the Amazon Linux 2 image compatible with AWS Lambda
-FROM amazonlinux:2
+# Use the Amazon Linux 2023 image compatible with AWS Lambda
+FROM amazonlinux:2023
 
 # Install Python 3 and ZIP
 RUN yum install -y python3 python3-pip zip && \
