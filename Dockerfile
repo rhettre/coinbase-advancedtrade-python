@@ -7,13 +7,15 @@ WORKDIR /var/task
 # Install necessary build tools and Rust
 RUN yum install -y zip gcc python3-devel libffi-devel && \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
+    echo 'source $HOME/.cargo/env' >> $HOME/.bashrc && \
     source $HOME/.cargo/env
 
 # Copy your application code and requirements.txt into the Docker image
 COPY . .
 
 # Install dependencies and create the layer
-RUN pip install --upgrade pip setuptools wheel && \
+RUN source $HOME/.cargo/env && \
+    pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt && \
     pip install . && \
     mkdir -p /tmp/python && \
