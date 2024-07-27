@@ -4,8 +4,8 @@ FROM public.ecr.aws/lambda/python:3.9
 # Set up the work directory
 WORKDIR /var/task
 
-# Install necessary build tools and Rust
-RUN yum install -y zip gcc python3-devel libffi-devel && \
+# Install necessary build tools, Rust, and OpenSSL development package
+RUN yum install -y zip gcc python3-devel libffi-devel openssl-devel && \
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
     echo 'source $HOME/.cargo/env' >> $HOME/.bashrc && \
     source $HOME/.cargo/env
