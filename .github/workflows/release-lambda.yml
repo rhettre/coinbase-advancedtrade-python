@@ -21,11 +21,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Install unzip
+        run: sudo apt-get update && sudo apt-get install -y unzip
+
       - name: Build Docker Image and Create Lambda Layer
         run: |
           docker buildx build --platform linux/${{ matrix.architecture }} \
             -t lambda-layer-builder:${{ matrix.architecture }} \
-            --output type=docker \
+            --load \
             -f Dockerfile .
           docker create --name layer_builder lambda-layer-builder:${{ matrix.architecture }}
           docker cp layer_builder:/tmp/layer.zip layer-${{ matrix.architecture }}.zip
