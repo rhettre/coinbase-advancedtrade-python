@@ -1,4 +1,4 @@
-name: Release Workflow
+name: Attach Asset to Release
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  build-and-release:
+  build-and-upload:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -26,23 +26,25 @@ jobs:
         run: |
           zip -r layer.zip ./
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Get Release by Tag
+        id: get_release
+        run: |
+          RELEASE_DATA=$(curl --request GET \
+            --url "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" \
+            --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
+            --header 'accept: application/vnd.github+json')
+          UPLOAD_URL=$(echo $RELEASE_DATA | jq -r .upload_url | sed 's/{?name,label}//')
+          echo "UPLOAD_URL=$UPLOAD_URL"
+          echo "::set-output name=upload_url::$UPLOAD_URL"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: ./layer.zip
           asset_name: layer.zip
           asset_content_type: application/zip
