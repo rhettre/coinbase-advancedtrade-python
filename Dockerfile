@@ -4,6 +4,9 @@ FROM public.ecr.aws/lambda/python:3.9
 # Set up the work directory
 WORKDIR /var/task
 
+# Install zip
+RUN yum install -y zip
+
 # Copy your application code and requirements.txt into the Docker image
 COPY . .
 
@@ -11,15 +14,15 @@ COPY . .
 RUN pip install --upgrade pip setuptools wheel && \
     pip install -r requirements.txt && \
     pip install . && \
-    mkdir -p python/lib/python3.9/site-packages && \
+    mkdir -p /tmp/python && \
     pip install \
         --platform manylinux2014_x86_64 \
         --implementation cp \
         --python-version 3.9 \
         --only-binary=:all: --upgrade \
-        -r requirements.txt -t python/lib/python3.9/site-packages && \
-    pip install . -t python/lib/python3.9/site-packages && \
-    cd python/lib/python3.9/site-packages && \
+        -r requirements.txt -t /tmp/python && \
+    pip install . -t /tmp/python && \
+    cd /tmp/python && \
     zip -r9 /tmp/layer.zip . && \
     cd /var/task
 
