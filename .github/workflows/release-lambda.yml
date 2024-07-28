@@ -1,3 +1,10 @@
+# This workflow will build and upload a Python Lambda Layer when a release is created
+# The layer is compatible with AWS Lambda Functions using Python 3.9 and x86_64 architecture
+# For more information on Lambda Layers, see: https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html
+
+# Note: This layer is specifically built for Python 3.9 and x86_64 architecture due to the build process.
+# If you need layers for different Python versions or architectures, you'll need to modify the build step.
+
 name: Build and Release Lambda Layer
 
 on:
@@ -27,7 +34,7 @@ jobs:
         mkdir python
         echo "coinbase-advancedtrade-python" > requirements.txt
         docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.9:latest /bin/sh -c "pip install --platform manylinux2014_x86_64 --implementation cp --python 3.9 --only-binary=:all: --upgrade -r requirements.txt -t python"
-        zip -r lambda_layer.zip python
+        zip -r layer-python3.9-x86_64.zip python
 
     - name: Upload Layer to Release
       uses: actions/upload-release-asset@v1
