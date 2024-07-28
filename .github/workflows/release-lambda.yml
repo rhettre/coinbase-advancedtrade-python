@@ -1,58 +1,40 @@
-name: Attach Asset to Release
+name: Build and Release Lambda Layer
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [created]
 
 jobs:
-  build-and-upload:
+  build-and-release-layer:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        architecture: [amd64, arm64]
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install virtualenv
 
-      - name: Install unzip
-        run: sudo apt-get update && sudo apt-get install -y unzip
+    - name: Create Lambda Layer
+      run: |
+        virtualenv venv
+        source venv/bin/activate
+        mkdir python
+        echo "coinbase-advancedtrade-python" > requirements.txt
+        docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.9:latest /bin/sh -c "pip install --platform manylinux2014_x86_64 --implementation cp --python 3.9 --only-binary=:all: --upgrade -r requirements.txt -t python"
+        zip -r lambda_layer.zip python
 
-      - name: Build Docker Image and Create Lambda Layer
-        run: |
-          docker buildx build --platform linux/${{ matrix.architecture }} \
-            -t lambda-layer-builder:${{ matrix.architecture }} \
-            --load \
-            -f Dockerfile .
-          docker create --name layer_builder lambda-layer-builder:${{ matrix.architecture }}
-          docker cp layer_builder:/tmp/layer.zip layer-${{ matrix.architecture }}.zip
-          unzip -l layer-${{ matrix.architecture }}.zip | grep -i cffi
-
-      - name: Get Release
-        id: get_release
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            const release = await github.rest.repos.getReleaseByTag({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag: context.ref.replace('refs/tags/', '')
-            });
-            core.setOutput('upload_url', release.data.upload_url);
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ./layer-${{ matrix.architecture }}.zip
-          asset_name: layer-${{ github.ref_name }}-${{ matrix.architecture }}.zip
-          asset_content_type: application/zip
+    - name: Upload Layer to Release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./lambda_layer.zip
+        asset_name: lambda_layer.zip
+        asset_content_type: application/zip
