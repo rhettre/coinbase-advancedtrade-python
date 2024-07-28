@@ -42,6 +42,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./lambda_layer.zip
-        asset_name: lambda_layer.zip
+        asset_path: ./layer-python3.9-x86_64.zip
+        asset_name: layer-python3.9-x86_64.zip
         asset_content_type: application/zip
