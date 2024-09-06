@@ -189,7 +189,7 @@ class TestCoinbaseClient(unittest.TestCase):
         self.assertTrue(results['success'])
         self.assertEqual(results['failure_reason'],
                          "UNKNOWN_CANCEL_FAILURE_REASON")
-        self.assertEqual(results['order_id'], "0000-00000")
+        self.assertEqual(results['success_response']['order_id'], "0000-00000")
 
     @patch('coinbase_advanced_trader.coinbase_client.cb_auth')
     def test_list_orders(self, mock_cb_auth):
@@ -341,7 +341,7 @@ class TestCoinbaseClient(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertIsInstance(result, dict)
         self.assertIn('order', result)
-        self.assertEqual(result['order']['order_id'], order_id)
+        self.assertEqual(result['order']['success_response']['order_id'], order_id)
         self.assertEqual(result['order']['product_id'], 'BTC-USD')
         self.assertEqual(result['order']['status'], 'OPEN')
 
