@@ -62,7 +62,7 @@ class OrderService:
                 raise Exception(error_log)
             
             order = Order(
-                id=order_response['order_id'],
+                id=order_response['success_response']['order_id'],
                 product_id=product_id,
                 side=OrderSide.BUY,
                 type=OrderType.MARKET,
@@ -113,7 +113,7 @@ class OrderService:
                 raise Exception(error_log)
             
             order = Order(
-                id=order_response['order_id'],
+                id=order_response['success_response']['order_id'],
                 product_id=product_id,
                 side=OrderSide.SELL,
                 type=OrderType.MARKET,
@@ -198,7 +198,7 @@ class OrderService:
         )
         
         order = Order(
-            id=order_response['order_id'],
+            id=order_response['success_response']['order_id'],
             product_id=product_id,
             side=side,
             type=OrderType.LIMIT,
