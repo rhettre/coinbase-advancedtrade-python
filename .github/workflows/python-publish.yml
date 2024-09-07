@@ -11,6 +11,7 @@ name: Upload Python Package
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -52,3 +53,10 @@ jobs:
       with:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Trigger Lambda Layer Workflow
+      if: success()
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.REPO_ACCESS_TOKEN }}
+        event-type: package-published
