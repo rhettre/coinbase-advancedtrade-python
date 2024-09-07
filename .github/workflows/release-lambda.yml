@@ -8,8 +8,9 @@
 name: Build and Release Lambda Layer
 
 on:
-  release:
-    types: [created]
+  repository_dispatch:
+    types: [package-published]
+  workflow_dispatch:
 
 jobs:
   build-and-release-layer:
