@@ -43,6 +43,11 @@ jobs:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
 
+    - name: Wait for PyPI to update
+      run: |
+        echo "Waiting for PyPI to update..."
+        sleep 300  # Wait for 5 minutes
+
   build-lambda-layer:
     needs: deploy
     runs-on: ubuntu-latest
@@ -64,7 +69,8 @@ jobs:
         virtualenv venv
         source venv/bin/activate
         mkdir python
-        echo "coinbase-advancedtrade-python" > requirements.txt
+        PACKAGE_VERSION=$(python setup.py --version)
+        echo "coinbase-advancedtrade-python==$PACKAGE_VERSION" > requirements.txt
         docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.9:latest /bin/sh -c "pip install --platform manylinux2014_x86_64 --implementation cp --python 3.9 --only-binary=:all: --upgrade -r requirements.txt -t python"
         zip -r layer-python3.9-x86_64.zip python
 
