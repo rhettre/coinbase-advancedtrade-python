@@ -4,3 +4,4 @@ urllib3 >= 2.2.2
 PyYAML >= 6.0.1
 cryptography>=42.0.4
 cffi
+alphasquared-py>=0.3.0

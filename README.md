@@ -120,6 +120,62 @@ new_schedule = [
 client.update_fgi_schedule(new_schedule)
 ```
 
+## AlphaSquared Integration
+
+This client now includes integration with AlphaSquared, allowing you to execute trading strategies based on AlphaSquared's risk analysis.
+
+### Setup
+
+1. Obtain your AlphaSquared API key from [AlphaSquared](https://alphasquared.io/).
+
+2. Initialize the AlphaSquared client along with the Coinbase client:
+
+```python
+from coinbase_advanced_trader import EnhancedRESTClient, AlphaSquaredTrader
+from alphasquared import AlphaSquared
+
+# Initialize Coinbase client
+coinbase_api_key = "YOUR_COINBASE_API_KEY"
+
+coinbase_api_secret = "YOUR_COINBASE_API_SECRET"
+
+coinbase_client = EnhancedRESTClient(api_key=coinbase_api_key, api_secret=coinbase_api_secret)
+
+# Initialize AlphaSquared client
+alphasquared_api_key = "YOUR_ALPHASQUARED_API_KEY"
+
+alphasquared_client = AlphaSquared(alphasquared_api_key, cache_ttl=60)
+
+# Create AlphaSquaredTrader
+trader = AlphaSquaredTrader(coinbase_client, alphasquared_client)
+```
+
+### Executing AlphaSquared Strategies
+
+To execute a trading strategy based on AlphaSquared's risk analysis:
+
+```python
+# Set trading parameters
+product_id = "BTC-USDC"
+
+# Your custom strategy name from AlphaSquared
+strategy_name = "My Custom Strategy"
+
+# Execute strategy
+trader.execute_strategy(product_id, strategy_name)
+```
+
+This will:
+1. Fetch the current risk level for the specified asset from AlphaSquared.
+2. Determine the appropriate action (buy/sell) and value based on the custom strategy defined in AlphaSquared and the current risk.
+3. Execute the appropriate trade on Coinbase if the conditions are met.
+
+> **Note:** Make sure to handle exceptions and implement proper logging in your production code. This integration only works with custom strategies; it does not work with the default strategies provided by AlphaSquared.
+
+### Customizing Strategies
+
+You can create custom strategies by modifying the `execute_strategy` method in the `AlphaSquaredTrader` class. This allows you to define specific trading logic based on the risk levels provided by AlphaSquared.
+
 ## Legacy Support
 
 The legacy authentication method is still supported but moved to a separate module. It will not receive the latest updates from the Coinbase SDK. To use the legacy method:
