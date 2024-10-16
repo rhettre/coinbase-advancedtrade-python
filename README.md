@@ -195,7 +195,7 @@ limit_buy_order = fiat_limit_buy("BTC-USDC", 10)
 
 ## Documentation
 
-For more information about the Coinbase Advanced Trader API, consult the [official API documentation](https://docs.cloud.coinbase.com/advanced-trade-api/docs/rest-api-overview/).
+For more information about the Coinbase Advanced Trader API, consult the [official API documentation](https://docs.cdp.coinbase.com/advanced-trade/docs/welcome).
 
 ## License
 
