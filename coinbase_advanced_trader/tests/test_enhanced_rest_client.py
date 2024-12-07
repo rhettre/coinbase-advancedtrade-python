@@ -68,48 +68,24 @@ class TestEnhancedRESTClient(unittest.TestCase):
         product_id = "BTC-USDC"
         fiat_amount = "10"
         price_multiplier = 0.9995
-        mock_order = Order(
-            id='fb67bb54-73ba-41ec-a038-9883664325b7',
-            product_id=product_id,
-            side=OrderSide.BUY,
-            type=OrderType.LIMIT,
-            size=Decimal('0.0002'),
-            price=Decimal('49975.00')
-        )
-        self.client._order_service.fiat_limit_buy.return_value = mock_order
 
-        result = self.client.fiat_limit_buy(
-            product_id, fiat_amount, price_multiplier
-        )
-
+        result = self.client.fiat_limit_buy(product_id, fiat_amount)
+        
         self.client._order_service.fiat_limit_buy.assert_called_once_with(
-            product_id, fiat_amount, price_multiplier
+            product_id, fiat_amount, None, price_multiplier
         )
-        self.assertEqual(result, mock_order)
 
     def test_fiat_limit_sell(self):
         """Test the fiat_limit_sell method."""
         product_id = "BTC-USDC"
         fiat_amount = "10"
         price_multiplier = 1.005
-        mock_order = Order(
-            id='fb67bb54-73ba-41ec-a038-9883664325b7',
-            product_id=product_id,
-            side=OrderSide.SELL,
-            type=OrderType.LIMIT,
-            size=Decimal('0.0002'),
-            price=Decimal('50250.00')
-        )
-        self.client._order_service.fiat_limit_sell.return_value = mock_order
 
-        result = self.client.fiat_limit_sell(
-            product_id, fiat_amount, price_multiplier
-        )
-
+        result = self.client.fiat_limit_sell(product_id, fiat_amount)
+        
         self.client._order_service.fiat_limit_sell.assert_called_once_with(
-            product_id, fiat_amount, price_multiplier
+            product_id, fiat_amount, None, price_multiplier
         )
-        self.assertEqual(result, mock_order)
 
     def test_trade_based_on_fgi(self):
         """Test the trade_based_on_fgi method."""

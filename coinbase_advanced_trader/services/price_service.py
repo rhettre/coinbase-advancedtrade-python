@@ -26,24 +26,27 @@ class PriceService:
             product_id (str): The ID of the product.
 
         Returns:
-            Optional[Decimal]: The spot price, or None if an error occurs.
+            The current spot price as a Decimal, or None if price cannot be retrieved.
         """
         try:
             response = self.rest_client.get_product(product_id)
-            quote_increment = Decimal(response['quote_increment'])
+            
+            # Convert response to dictionary if it's a GetProductResponse object
+            response_dict = response if isinstance(response, dict) else response.__dict__
+            
+            if 'price' not in response_dict or 'quote_increment' not in response_dict:
+                logger.error(f"Required fields missing in response for {product_id}")
+                return None
 
-            if 'price' in response:
-                price = Decimal(response['price'])
-                return price.quantize(quote_increment)
-
-            logger.error(f"'price' field missing in response for {product_id}")
-            return None
+            price = Decimal(response_dict['price'])
+            quote_increment = Decimal(response_dict['quote_increment'])
+            return price.quantize(quote_increment)
 
         except Exception as e:
             logger.error(f"Error fetching spot price for {product_id}: {e}")
             return None
 
-    def get_product_details(self, product_id: str) -> Dict[str, Decimal]:
+    def get_product_details(self, product_id: str) -> Optional[Dict[str, Decimal]]:
         """
         Get the details of a product.
 
@@ -51,10 +54,14 @@ class PriceService:
             product_id (str): The ID of the product.
 
         Returns:
-            Dict[str, Decimal]: A dictionary containing base and quote increments.
+            Optional[Dict[str, Decimal]]: A dictionary containing base and quote increments, or None if failed.
         """
-        response = self.rest_client.get_product(product_id)
-        return {
-            'base_increment': Decimal(response['base_increment']),
-            'quote_increment': Decimal(response['quote_increment'])
-        }
+        try:
+            response = self.rest_client.get_product(product_id)
+            return {
+                'base_increment': Decimal(response['base_increment']),
+                'quote_increment': Decimal(response['quote_increment'])
+            }
+        except Exception as e:
+            logger.error(f"Error fetching product details for {product_id}: {e}")
+            return None

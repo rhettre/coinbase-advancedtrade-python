@@ -72,7 +72,7 @@ class TestAccountService(unittest.TestCase):
         }
         self.account_service._get_accounts = Mock(return_value=mock_accounts)
 
-        held_currencies = self.account_service.list_held_cryptocurrencies()
+        held_currencies = self.account_service.list_held_crypto_balances()
         self.assertEqual(set(held_currencies), {'BTC', 'XRP'})
 
     @patch('coinbase_advanced_trader.services.account_service.datetime')

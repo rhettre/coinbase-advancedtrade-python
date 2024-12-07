@@ -174,22 +174,33 @@ class OrderService:
         Returns:
             Order: The order object containing details about the executed order.
         """
+        logger.info(f"Starting limit order placement - Side: {side}, Product: {product_id}")
+        
         current_price = self.price_service.get_spot_price(product_id)
+        if current_price is None:
+            raise ValueError(f"Could not get current price for {product_id}")
+        
         product_details = self.price_service.get_product_details(product_id)
+        if product_details is None:
+            raise ValueError(f"Could not get product details for {product_id}")
+
         base_increment = Decimal(product_details['base_increment'])
         quote_increment = Decimal(product_details['quote_increment'])
 
-        if limit_price:
-            adjusted_price = Decimal(limit_price).quantize(quote_increment)
-        else:
-            adjusted_price = (current_price * Decimal(price_multiplier)).quantize(quote_increment)
+        # Calculate adjusted price
+        adjusted_price = (Decimal(limit_price) if limit_price 
+                        else current_price * Decimal(str(price_multiplier))).quantize(quote_increment)
 
-        base_size = calculate_base_size(Decimal(fiat_amount), adjusted_price, base_increment)
+        # Calculate base size
+        base_size = (Decimal(fiat_amount) / adjusted_price if side == OrderSide.SELL
+                    else calculate_base_size(Decimal(fiat_amount), adjusted_price, base_increment))
         base_size = base_size.quantize(base_increment)
 
+        # Place the order
         order_func = (self.rest_client.limit_order_gtc_buy 
-                      if side == OrderSide.BUY 
-                      else self.rest_client.limit_order_gtc_sell)
+                    if side == OrderSide.BUY 
+                    else self.rest_client.limit_order_gtc_sell)
+        
         order_response = order_func(
             self._generate_client_order_id(),
             product_id,
@@ -205,6 +216,7 @@ class OrderService:
             size=base_size,
             price=adjusted_price
         )
+        
         self._log_order_result(order_response, product_id, base_size, adjusted_price, side)
         return order
     
