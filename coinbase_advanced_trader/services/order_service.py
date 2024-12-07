@@ -176,54 +176,38 @@ class OrderService:
         """
         logger.info(f"Starting limit order placement - Side: {side}, Product: {product_id}")
         
-        # Get current price and product details
         current_price = self.price_service.get_spot_price(product_id)
-        logger.info(f"Current price: {current_price}")
+        if current_price is None:
+            raise ValueError(f"Could not get current price for {product_id}")
         
         product_details = self.price_service.get_product_details(product_id)
-        logger.info(f"Product details: {product_details}")
-        
+        if product_details is None:
+            raise ValueError(f"Could not get product details for {product_id}")
+
         base_increment = Decimal(product_details['base_increment'])
         quote_increment = Decimal(product_details['quote_increment'])
-        logger.info(f"Increments - Base: {base_increment}, Quote: {quote_increment}")
 
         # Calculate adjusted price
-        if limit_price:
-            adjusted_price = Decimal(limit_price).quantize(quote_increment)
-            logger.info(f"Using provided limit price: {adjusted_price}")
-        else:
-            adjusted_price = (current_price * Decimal(str(price_multiplier))).quantize(quote_increment)
-            logger.info(f"Calculated adjusted price: {adjusted_price} (multiplier: {price_multiplier})")
+        adjusted_price = (Decimal(limit_price) if limit_price 
+                        else current_price * Decimal(str(price_multiplier))).quantize(quote_increment)
 
-        # Calculate base size differently for buy and sell
-        if side == OrderSide.SELL:
-            # For sell orders, we need to calculate how much crypto to sell to receive the desired fiat amount
-            base_size = Decimal(fiat_amount) / adjusted_price
-            logger.info(f"Sell order - Calculated base size: {base_size} to receive {fiat_amount} fiat")
-        else:
-            # For buy orders, calculate how much crypto we can buy with the fiat amount
-            base_size = calculate_base_size(Decimal(fiat_amount), adjusted_price, base_increment)
-            logger.info(f"Buy order - Calculated base size: {base_size} for {fiat_amount} fiat")
-
+        # Calculate base size
+        base_size = (Decimal(fiat_amount) / adjusted_price if side == OrderSide.SELL
+                    else calculate_base_size(Decimal(fiat_amount), adjusted_price, base_increment))
         base_size = base_size.quantize(base_increment)
-        logger.info(f"Final quantized base size: {base_size}")
 
-        # Select the appropriate order function
-        order_func = (self.rest_client.limit_order_gtc_buy 
-                      if side == OrderSide.BUY 
-                      else self.rest_client.limit_order_gtc_sell)
-        
         # Place the order
-        logger.info(f"Placing {side.value} order - Size: {base_size}, Price: {adjusted_price}")
+        order_func = (self.rest_client.limit_order_gtc_buy 
+                    if side == OrderSide.BUY 
+                    else self.rest_client.limit_order_gtc_sell)
+        
         order_response = order_func(
             self._generate_client_order_id(),
             product_id,
             str(base_size),
             str(adjusted_price)
         )
-        logger.info(f"Order response received: {order_response}")
         
-        # Create order object
         order = Order(
             id=order_response['success_response']['order_id'],
             product_id=product_id,
