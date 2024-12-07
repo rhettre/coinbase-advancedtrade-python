@@ -1,7 +1,7 @@
-coinbase-advanced-py
-requests >=2.31.0
+coinbase-advanced-py == 1.8.2
+requests >= 2.31.0
 urllib3 >= 2.2.2
 PyYAML >= 6.0.1
-cryptography>=42.0.4
+cryptography >= 42.0.4
 cffi
-alphasquared-py>=0.3.0
+alphasquared-py >= 0.3.0
