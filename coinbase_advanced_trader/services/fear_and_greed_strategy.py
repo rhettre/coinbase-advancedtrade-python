@@ -2,12 +2,11 @@ import time
 from decimal import Decimal
 from typing import Optional, Tuple
 
-import requests
+from fear_and_greed import FearAndGreedIndex
 
 from coinbase_advanced_trader.config import config_manager
 from coinbase_advanced_trader.logger import logger
 from coinbase_advanced_trader.models import Order
-from coinbase_advanced_trader.trading_config import FEAR_AND_GREED_API_URL
 from .trading_strategy_service import BaseTradingStrategy
 
 
@@ -26,8 +25,7 @@ class FearAndGreedStrategy(BaseTradingStrategy):
         """
         super().__init__(order_service, price_service)
         self.config = config
-        self._last_fgi_fetch_time: float = 0
-        self._fgi_cache: Optional[Tuple[int, str]] = None
+        self._fgi_client = FearAndGreedIndex()
 
     def execute_trade(self, product_id: str, fiat_amount: str) -> Optional[Order]:
         """
@@ -37,7 +35,9 @@ class FearAndGreedStrategy(BaseTradingStrategy):
         :param fiat_amount: The amount of fiat currency to trade.
         :return: An Order object if a trade is executed, None otherwise.
         """
-        fgi, fgi_classification = self.get_fear_and_greed_index()
+        fgi = self._fgi_client.get_current_value()
+        fgi_classification = self._fgi_client.get_current_classification()
+        
         logger.info(f"FGI retrieved: {fgi} ({fgi_classification}) "
                     f"for trading {product_id}")
 
@@ -56,22 +56,6 @@ class FearAndGreedStrategy(BaseTradingStrategy):
 
         logger.warning(f"No trading condition met for FGI: {fgi}")
         return None
-
-    def get_fear_and_greed_index(self) -> Tuple[int, str]:
-        """
-        Retrieve the Fear and Greed Index (FGI) from the API or cache.
-
-        :return: A tuple containing the FGI value and classification.
-        """
-        current_time = time.time()
-        cache_duration = config_manager.get('FGI_CACHE_DURATION')
-        if (not self._fgi_cache or
-                (current_time - self._last_fgi_fetch_time > cache_duration)):
-            response = requests.get(FEAR_AND_GREED_API_URL)
-            data = response.json()['data'][0]
-            self._fgi_cache = (int(data['value']), data['value_classification'])
-            self._last_fgi_fetch_time = current_time
-        return self._fgi_cache
 
     def _execute_trade(self, product_id: str, fiat_amount: str,
                        action: str) -> Optional[Order]:
