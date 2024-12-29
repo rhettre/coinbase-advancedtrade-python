@@ -12,12 +12,23 @@ on:
   release:
     types: [created]
   workflow_dispatch:
+    inputs:
+      job_to_run:
+        description: 'Select action to perform'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both  # Deploy to PyPI and build Lambda layer
+          - deploy_to_pypi  # Only deploy package to PyPI
+          - build_lambda_layer  # Only build and attach Lambda layer to existing release
 
 permissions:
   contents: write
 
 jobs:
   deploy:
+    if: github.event.inputs.job_to_run == 'deploy_to_pypi' || github.event.inputs.job_to_run == 'both' || github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -50,9 +61,26 @@ jobs:
 
   build-lambda-layer:
     needs: deploy
+    if: |
+      always() &&
+      (github.event.inputs.job_to_run == 'build_lambda_layer' || 
+       github.event.inputs.job_to_run == 'both' || 
+       github.event_name == 'release') &&
+      (needs.deploy.result == 'success' || 
+       needs.deploy.result == 'skipped' || 
+       github.event.inputs.job_to_run == 'build_lambda_layer')
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
+    - name: Get Latest Release
+      if: github.event_name != 'release'
+      id: get_release
+      run: |
+        RELEASE_URL=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                     "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+                     | jq -r '.upload_url')
+        echo "RELEASE_URL=${RELEASE_URL}" >> $GITHUB_ENV
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -89,7 +117,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        upload_url: ${{ github.event.release.upload_url }}
+        upload_url: ${{ github.event_name == 'release' && github.event.release.upload_url || env.RELEASE_URL }}
         asset_path: ./layer-python3.12-x86_64.zip
         asset_name: layer-python3.12-x86_64.zip
         asset_content_type: application/zip
