@@ -12,12 +12,23 @@ on:
   release:
     types: [created]
   workflow_dispatch:
+    inputs:
+      job_to_run:
+        description: 'Job to run (deploy, build-lambda-layer, or both)'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - deploy
+          - build-lambda-layer
 
 permissions:
   contents: write
 
 jobs:
   deploy:
+    if: github.event.inputs.job_to_run == 'deploy' || github.event.inputs.job_to_run == 'both' || github.event_name == 'release'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -50,6 +61,14 @@ jobs:
 
   build-lambda-layer:
     needs: deploy
+    if: |
+      always() &&
+      (github.event.inputs.job_to_run == 'build-lambda-layer' || 
+       github.event.inputs.job_to_run == 'both' || 
+       github.event_name == 'release') &&
+      (needs.deploy.result == 'success' || 
+       needs.deploy.result == 'skipped' || 
+       github.event.inputs.job_to_run == 'build-lambda-layer')
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
