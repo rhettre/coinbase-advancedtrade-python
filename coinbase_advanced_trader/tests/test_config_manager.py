@@ -31,8 +31,6 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(test_config['BUY_PRICE_MULTIPLIER'], 0.9990)
         self.assertEqual(test_config['SELL_PRICE_MULTIPLIER'], 1.010)
         self.assertEqual(test_config['LOG_LEVEL'], 'INFO')
-        self.assertEqual(test_config['FEAR_AND_GREED_API_URL'],
-                         self.default_config['FEAR_AND_GREED_API_URL'])
 
     @patch('coinbase_advanced_trader.config.Path.exists')
     def test_load_config_without_existing_file(self, mock_exists):

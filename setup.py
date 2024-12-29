@@ -8,7 +8,7 @@ with open("requirements.txt") as f:
 
 setup(
     name='coinbase-advancedtrade-python',
-    version='0.3.3',
+    version='0.4.0',
     description='The unofficial Python client for the Coinbase Advanced Trade API',
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -30,10 +30,7 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
-        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
     ],
-    python_requires='>=3.9',
+    python_requires='>=3.12',
 )

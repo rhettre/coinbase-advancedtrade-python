@@ -99,26 +99,38 @@ Note: Both methods use a caching mechanism to reduce API calls. The account data
 
 ### Usage of Fear and Greed Index
 
+The client uses the [fear-and-greed-crypto](https://github.com/rhettre/fear-and-greed-crypto) package to fetch the current Fear and Greed Index value. This index helps determine market sentiment and automate trading decisions.
+
 ```python
 # Trade based on Fear and Greed Index
 client.trade_based_on_fgi("BTC-USDC", "10")
 ```
 
-You can also update and retrieve the Fear and Greed Index schedule:
+You can customize the trading behavior by updating the Fear and Greed Index schedule:
 
 ```python
 # Get current FGI schedule
 current_schedule = client.get_fgi_schedule()
 
-# Update FGI schedule
+# Update FGI schedule with custom thresholds and actions
 new_schedule = [
-    {'threshold': 15, 'factor': 1.2, 'action': 'buy'},
-    {'threshold': 37, 'factor': 1.0, 'action': 'buy'},
-    {'threshold': 35, 'factor': 0.8, 'action': 'sell'},
-    {'threshold': 45, 'factor': 0.6, 'action': 'sell'}
+    {'threshold': 15, 'factor': 1.2, 'action': 'buy'},   # Buy more in extreme fear
+    {'threshold': 37, 'factor': 1.0, 'action': 'buy'},   # Buy normal amount in fear
+    {'threshold': 35, 'factor': 0.8, 'action': 'sell'},  # Sell some in greed
+    {'threshold': 45, 'factor': 0.6, 'action': 'sell'}   # Sell more in extreme greed
 ]
 client.update_fgi_schedule(new_schedule)
 ```
+
+The schedule determines:
+- When to buy or sell based on the Fear and Greed Index value
+- How much to adjust the trade amount (using the factor)
+- What action to take at each threshold
+
+For example, with the above schedule:
+- If FGI is 10 (Extreme Fear), it will buy with 1.2x the specified amount
+- If FGI is 50 (Neutral), no trade will be executed
+- If FGI is 80 (Extreme Greed), it will sell with 0.6x the specified amount
 
 ## AlphaSquared Integration
 
@@ -175,6 +187,15 @@ This will:
 ### Customizing Strategies
 
 You can create custom strategies by modifying the `execute_strategy` method in the `AlphaSquaredTrader` class. This allows you to define specific trading logic based on the risk levels provided by AlphaSquared.
+
+## AWS Lambda Compatibility
+
+When using this package in AWS Lambda, ensure your Lambda function is configured to use Python 3.12. The cryptography binaries in the Lambda layer are compiled for Python 3.12, and using a different Python runtime version will result in compatibility issues.
+
+To configure your Lambda function:
+1. Set the runtime to Python 3.12
+2. Use the provided Lambda layer from the latest release
+3. If building custom layers, ensure they are built using the same Python version as the Lambda runtime.
 
 ## Legacy Support
 
