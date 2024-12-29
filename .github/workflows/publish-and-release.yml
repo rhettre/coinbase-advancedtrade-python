@@ -62,16 +62,17 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install virtualenv
+        pip install virtualenv setuptools wheel
 
     - name: Create Lambda Layer
       run: |
         virtualenv venv
         source venv/bin/activate
+        pip install setuptools wheel
         mkdir python
         PACKAGE_VERSION=$(python setup.py --version)
         echo "coinbase-advancedtrade-python==$PACKAGE_VERSION" > requirements.txt
-        docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.12:latest /bin/sh -c "pip install --platform manylinux2014_x86_64 --implementation cp --python 3.12 --only-binary=:all: --upgrade -r requirements.txt -t python"
+        docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.12:latest /bin/sh -c "pip install setuptools wheel && pip install --platform manylinux2014_x86_64 --implementation cp --python 3.12 --only-binary=:all: --upgrade -r requirements.txt -t python"
         zip -r layer-python3.12-x86_64.zip python
 
     - name: Upload Layer to Release
