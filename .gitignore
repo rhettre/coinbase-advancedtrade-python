@@ -1,3 +1,5 @@
+cdp_api_key.json
+myenv/
 *.DS_Store
 .idea
 *.pyc

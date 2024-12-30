@@ -17,22 +17,23 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
    pip install coinbase-advancedtrade-python
    ```
 
-2. Obtain your API key and secret from the Coinbase Developer Platform. The new API key format looks like this:
-   ```
-   API Key: organizations/{org_id}/apiKeys/{key_id}
-   API Secret: -----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----\n
+2. Obtain your API key and secret from the Coinbase Developer Platform. 
+
+Download the api key in Coinbase.  Move cdp_api_key.json into project folder. Python code will read keys from this file.  You may rename cdp_api_key.json to something like strategy1.json to seperate different keys/logic.
    ```
 
 ## Authentication
 
 Here's an example of how to authenticate using the new method:
-
-```python
+```
 from coinbase_advanced_trader.enhanced_rest_client import EnhancedRESTClient
+from include import load_api_credentials
 
-api_key = "organizations/{org_id}/apiKeys/{key_id}"
-api_secret = "-----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----\n"
+# Load API credentials
+api_key, api_secret = load_api_credentials()    # Default case opens cdp_api_key.json
+#api_key, api_secret = load_api_credentials( 'foo.json' )    # Optional case opens a file name given, different keys to open different CB portfolios
 
+# use loaded keys
 client = EnhancedRESTClient(api_key=api_key, api_secret=api_secret)
 ```
 
