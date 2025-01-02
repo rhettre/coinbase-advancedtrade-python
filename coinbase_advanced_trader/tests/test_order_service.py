@@ -110,6 +110,40 @@ class TestOrderService(unittest.TestCase):
         self.assertEqual(order.size, expected_size)
         self.assertEqual(order.price, adjusted_price)
 
+    def test_fiat_limit_buy_error(self):
+        """Test the fiat_limit_buy with a response that raises an exception."""
+        product_id = "BTC-USDC"
+        fiat_amount = "10"
+
+        # Mock responses with correct format
+        mock_order_response = {
+            'success': False, 
+            'error_response': {
+                'error': 'INSUFFICIENT_FUND', 
+                'message': 'Insufficient balance in source account', 
+                'error_details': '', 
+                'preview_failure_reason': 'PREVIEW_INSUFFICIENT_FUND'
+            }
+        }
+        self.rest_client_mock.limit_order_gtc_buy.return_value = mock_order_response
+        
+        # Mock price service to return specific values
+        spot_price = Decimal('50000')
+        base_increment = Decimal('0.00000001')
+        quote_increment = Decimal('0.01')
+        price_multiplier = Decimal('0.9995')
+        
+        self.order_service.price_service.get_spot_price.return_value = spot_price
+        self.order_service.price_service.get_product_details.return_value = {
+            'base_increment': str(base_increment),
+            'quote_increment': str(quote_increment)
+        }
+
+        with self.assertRaises(Exception) as context:
+            order = self.order_service.fiat_limit_buy(product_id, fiat_amount)
+
+        self.assertEqual(str(context.exception), "Failed to place a limit order. Reason: Insufficient balance in source account. Preview failure reason: PREVIEW_INSUFFICIENT_FUND")
+
     def test_fiat_limit_sell(self):
         """Test the fiat_limit_sell method."""
         product_id = "BTC-USDC"
