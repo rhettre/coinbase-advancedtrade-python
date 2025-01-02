@@ -210,7 +210,7 @@ class OrderService:
             )
 
             if not order_response['success']:
-                error_response = order_response.get('error_response', {})
+                error_response = order_response.to_dict().get('error_response', {})
                 error_message = error_response.get('message', 'Unknown error')
                 preview_failure_reason = error_response.get('preview_failure_reason', 'Unknown')
                 error_log = (f"Failed to place a limit order. "
