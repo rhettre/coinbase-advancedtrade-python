@@ -201,86 +201,43 @@ class OrderService:
                     if side == OrderSide.BUY 
                     else self.rest_client.limit_order_gtc_sell)
         
-        order_response = order_func(
-            self._generate_client_order_id(),
-            product_id,
-            str(base_size),
-            str(adjusted_price)
-        )
-
-        if order_response["success"]:
-            """
-            The order was successful. Process, log, and return.
-            """
-            order = self._build_order(
-                order_response['success_response']['order_id'],
+        try:
+            order_response = order_func(
+                self._generate_client_order_id(),
                 product_id,
-                side,
-                OrderType.LIMIT,
-                base_size,
-                adjusted_price
-            )
-            self._log_order_result(order_response, product_id, base_size, adjusted_price, side)
-            logger.info(f"Order: {order}")
-            return order
-        
-        else:
-            """
-            For some reason, the order placement failed. Log and return "something(?)"
-            """
-            order_error = order_response['error_response']["error"]
-            logger.info(f"Order placed resulted in {order_error}")
-
-            """
-            Build an Order object with the error_response.error as the the
-            order_id. This convention allows to return an order and be able
-            to handle issues with order placement.
-            """
-
-            error_order_id = 'ORDER_ERROR_'+order_error
-
-            error_order = self._build_order(
-                error_order_id, 
-                product_id, 
-                side, 
-                OrderType.LIMIT, 
-                base_size, 
-                adjusted_price, 
-                'error'
+                str(base_size),
+                str(adjusted_price)
             )
 
-            match order_error:
-                case 'INSUFFICIENT_FUND':
-                    logger.info("Do NSF stuff here.")
-                    return error_order
+            if not order_response['success']:
+                error_response = order_response.get('error_response', {})
+                error_message = error_response.get('message', 'Unknown error')
+                preview_failure_reason = error_response.get('preview_failure_reason', 'Unknown')
+                error_log = (f"Failed to place a limit order. "
+                             f"Reason: {error_message}. "
+                             f"Preview failure reason: {preview_failure_reason}")
+                logger.error(error_log)
+                raise Exception(error_log)
 
-                case 'INVALID_LIMIT_PRICE_POST_ONLY':
-                    logger.info("Do INVALID_LIMIT_PRICE_POST_ONLY stuff here")
-                    return error_order
-
-                case 'INVALID_PRICE_PRECISION':
-                    logger.info("Do INVALID_PRICE_PRECISION stuff here.")
-                    return error_order
-
-                case _:
-                    logger.error("An unprocessed order error occurred.")
-                    return error_order
-                    
-    def _build_order(id, product_id, side, type, size, price, status = 'pending') -> Order:
-        """
-        Helper function to build an Order object. Include 'status' parameter
-        to allow for error orders.
-        """
-        order = Order(
-                id=id,
+            order = Order(
+                id=order_response['success_response']['order_id'],
                 product_id=product_id,
                 side=side,
-                type=type,
-                size=size,
-                price=price,
-                status=status
-        )
-        return order
+                type=OrderType.LIMIT,
+                size=base_size,
+                price=adjusted_price
+            )
+            self._log_order_result(order_response, product_id, base_size, adjusted_price, side)
+            return order
+        
+        except Exception as e:
+            error_message = str(e)
+            if "Invalid product_id" in error_message:
+                error_log = (f"Failed to place a limit order. "
+                             f"Reason: {error_message}. "
+                             f"Preview failure reason: Unknown")
+                logger.error(error_log)
+            raise
     
     def _log_order_result(self, order: Dict[str, Any], product_id: str, amount: Any, price: Any = None, side: OrderSide = None) -> None:
         """
