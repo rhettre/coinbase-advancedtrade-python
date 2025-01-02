@@ -201,24 +201,43 @@ class OrderService:
                     if side == OrderSide.BUY 
                     else self.rest_client.limit_order_gtc_sell)
         
-        order_response = order_func(
-            self._generate_client_order_id(),
-            product_id,
-            str(base_size),
-            str(adjusted_price)
-        )
+        try:
+            order_response = order_func(
+                self._generate_client_order_id(),
+                product_id,
+                str(base_size),
+                str(adjusted_price)
+            )
+
+            if not order_response['success']:
+                error_response = order_response.to_dict().get('error_response', {})
+                error_message = error_response.get('message', 'Unknown error')
+                preview_failure_reason = error_response.get('preview_failure_reason', 'Unknown')
+                error_log = (f"Failed to place a limit order. "
+                             f"Reason: {error_message}. "
+                             f"Preview failure reason: {preview_failure_reason}")
+                logger.error(error_log)
+                raise Exception(error_log)
+
+            order = Order(
+                id=order_response['success_response']['order_id'],
+                product_id=product_id,
+                side=side,
+                type=OrderType.LIMIT,
+                size=base_size,
+                price=adjusted_price
+            )
+            self._log_order_result(order_response, product_id, base_size, adjusted_price, side)
+            return order
         
-        order = Order(
-            id=order_response['success_response']['order_id'],
-            product_id=product_id,
-            side=side,
-            type=OrderType.LIMIT,
-            size=base_size,
-            price=adjusted_price
-        )
-        
-        self._log_order_result(order_response, product_id, base_size, adjusted_price, side)
-        return order
+        except Exception as e:
+            error_message = str(e)
+            if "Invalid product_id" in error_message:
+                error_log = (f"Failed to place a limit order. "
+                             f"Reason: {error_message}. "
+                             f"Preview failure reason: Unknown")
+                logger.error(error_log)
+            raise
     
     def _log_order_result(self, order: Dict[str, Any], product_id: str, amount: Any, price: Any = None, side: OrderSide = None) -> None:
         """
