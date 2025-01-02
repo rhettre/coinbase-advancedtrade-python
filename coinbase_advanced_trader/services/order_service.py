@@ -271,4 +271,4 @@ class OrderService:
                          f"Reason: {failure_reason}. "
                          f"Preview failure reason: {preview_failure_reason}")
         
-        logger.info(f"Coinbase response: {order}")
+        logger.debug(f"Coinbase response: {order}")
