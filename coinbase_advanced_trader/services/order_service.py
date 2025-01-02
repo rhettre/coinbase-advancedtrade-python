@@ -221,6 +221,7 @@ class OrderService:
                 adjusted_price
             )
             self._log_order_result(order_response, product_id, base_size, adjusted_price, side)
+            logger.info(f"Order: {order}")
             return order
         
         else:
@@ -228,7 +229,7 @@ class OrderService:
             For some reason, the order placement failed. Log and return "something(?)"
             """
             order_error = order_response['error_response']["error"]
-            logger.error(f"Order placed resulted in {order_error}")
+            logger.info(f"Order placed resulted in {order_error}")
 
             """
             Build an Order object with the error_response.error as the the
@@ -250,15 +251,15 @@ class OrderService:
 
             match order_error:
                 case 'INSUFFICIENT_FUND':
-                    logger.debug("Do NSF stuff here.")
+                    logger.info("Do NSF stuff here.")
                     return error_order
 
                 case 'INVALID_LIMIT_PRICE_POST_ONLY':
-                    logger.debug("Do INVALID_LIMIT_PRICE_POST_ONLY stuff here")
+                    logger.info("Do INVALID_LIMIT_PRICE_POST_ONLY stuff here")
                     return error_order
 
                 case 'INVALID_PRICE_PRECISION':
-                    logger.debug("Do INVALID_PRICE_PRECISION stuff here.")
+                    logger.info("Do INVALID_PRICE_PRECISION stuff here.")
                     return error_order
 
                 case _:
@@ -313,4 +314,4 @@ class OrderService:
                          f"Reason: {failure_reason}. "
                          f"Preview failure reason: {preview_failure_reason}")
         
-        logger.debug(f"Coinbase response: {order}")
+        logger.info(f"Coinbase response: {order}")
