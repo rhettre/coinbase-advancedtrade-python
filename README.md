@@ -12,14 +12,14 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 
 ## Setup
 
-1. Install the package using pip:
+1. Install the required packages using pip:
    ```bash
-   pip install coinbase-advancedtrade-python
+   pip install -r requirements.txt
    ```
 
 2. Obtain your API key and secret from the Coinbase Developer Platform. 
 
-Download the api key in Coinbase.  Move cdp_api_key.json into project folder. Python code will read keys from this file.  You may rename cdp_api_key.json to something like strategy1.json to seperate different keys/logic.
+Download the api key in Coinbase.  Move `cdp_api_key.json` into project folder. Python code will read keys from this file.  You may rename `cdp_api_key.json` to something like strategy1.json to seperate different keys/logic.
    ```
 
 ## Authentication
