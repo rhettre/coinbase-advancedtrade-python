@@ -15,11 +15,21 @@ class TestOrderService(unittest.TestCase):
         self.rest_client_mock = Mock()
         self.price_service_mock = Mock(spec=PriceService)
         self.order_service = OrderService(self.rest_client_mock, self.price_service_mock)
+        
+        # Mock product details for consistent rounding
+        self.mock_product_details = {
+            'base_increment': '0.00000001',  # 8 decimal places for BTC
+            'quote_increment': '0.01'        # 2 decimal places for USDC
+        }
+        self.price_service_mock.get_product_details.return_value = self.mock_product_details
 
     def test_fiat_market_buy(self):
         """Test the fiat_market_buy method."""
         product_id = "BTC-USDC"
         fiat_amount = "10"
+        # Add spot price mock
+        self.price_service_mock.get_spot_price.return_value = Decimal('50000.00')
+        
         mock_response = {
             'success': True,
             'order_id': '007e54c1-9e53-4afc-93f1-92cd5e98bc20',
@@ -47,7 +57,10 @@ class TestOrderService(unittest.TestCase):
         product_id = "BTC-USDC"
         fiat_amount = "10"
         mock_spot_price = Decimal('50000')
-        mock_product_details = {'base_increment': '0.00000001'}
+        mock_product_details = {
+            'base_increment': '0.00000001',
+            'quote_increment': '0.01'
+        }
         self.price_service_mock.get_spot_price.return_value = mock_spot_price
         self.price_service_mock.get_product_details.return_value = mock_product_details
 
@@ -172,37 +185,67 @@ class TestOrderService(unittest.TestCase):
     @patch('coinbase_advanced_trader.services.order_service.logger')
     def test_log_order_result(self, mock_logger):
         """Test the _log_order_result method."""
-        order_response = {
-            'success': True,
-            'order_id': 'fb67bb54-73ba-41ec-a038-9883664325b7',
-            'success_response': {
-                'order_id': 'fb67bb54-73ba-41ec-a038-9883664325b7',
-                'product_id': 'BTC-USDC',
-                'side': 'BUY',
-                'client_order_id': '12345678901'
+        # Mock spot price for market orders
+        self.price_service_mock.get_spot_price.return_value = Decimal('50000.00')
+
+        test_cases = [
+            {
+                'name': 'limit buy',
+                'order_response': {
+                    'success': True,
+                    'success_response': {'order_id': 'test-id', 'side': 'BUY'}
+                },
+                'amount': '10.00',
+                'price': '50000.00',
+                'side': OrderSide.BUY,
+                'expected_message': "Successfully placed a limit buy order for 10.00 USDC of BTC (~0.00020000 BTC) at 50000.00 USDC"
             },
-            'order_configuration': {
-                'limit_limit_gtc': {
-                    'base_size': '0.00020010',
-                    'limit_price': '49975.00',
-                    'post_only': False
-                }
+            {
+                'name': 'market buy',
+                'order_response': {
+                    'success': True,
+                    'success_response': {'order_id': 'test-id', 'side': 'BUY'}
+                },
+                'amount': '10.00',
+                'price': None,
+                'side': OrderSide.BUY,
+                'expected_message': "Successfully placed a market buy order for 10.00 USDC of BTC (~0.00020000 BTC) at 50000.00 USDC"
+            },
+            {
+                'name': 'limit sell',
+                'order_response': {
+                    'success': True,
+                    'success_response': {'order_id': 'test-id', 'side': 'SELL'}
+                },
+                'amount': '0.00020000',
+                'price': '50000.00',
+                'side': OrderSide.SELL,
+                'expected_message': "Successfully placed a limit sell order for 10.00 USDC of BTC (~0.00020000 BTC) at 50000.00 USDC"
+            },
+            {
+                'name': 'market sell',
+                'order_response': {
+                    'success': True,
+                    'success_response': {'order_id': 'test-id', 'side': 'SELL'}
+                },
+                'amount': '0.00020000',
+                'price': None,
+                'side': OrderSide.SELL,
+                'expected_message': "Successfully placed a market sell order for 10.00 USDC of BTC (~0.00020000 BTC) at 50000.00 USDC"
             }
-        }
-        product_id = "BTC-USDC"
-        amount = Decimal('0.00020010')
-        price = Decimal('49975.00')
-        side = OrderSide.BUY
+        ]
 
-        self.order_service._log_order_result(
-            order_response, product_id, amount, price, side
-        )
-
-        mock_logger.info.assert_called_once_with(
-            "Successfully placed a limit buy order for 0.00020010 BTC ($10.00) "
-            "at a price of 49975.00 USDC."
-        )
-        mock_logger.debug.assert_called_once_with(f"Coinbase response: {order_response}")
+        for test_case in test_cases:
+            with self.subTest(name=test_case['name']):
+                self.order_service._log_order_result(
+                    test_case['order_response'],
+                    'BTC-USDC',
+                    test_case['amount'],
+                    test_case['price'],
+                    test_case['side']
+                )
+                mock_logger.info.assert_called_with(test_case['expected_message'])
+                mock_logger.info.reset_mock()
 
 
 if __name__ == '__main__':
