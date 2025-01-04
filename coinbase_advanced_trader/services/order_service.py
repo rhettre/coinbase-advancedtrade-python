@@ -68,7 +68,7 @@ class OrderService:
                 type=OrderType.MARKET,
                 size=Decimal(fiat_amount)
             )
-            self._log_order_result(order_response, product_id, fiat_amount)
+            self._log_order_result(order_response, product_id, fiat_amount, side=OrderSide.BUY)
             return order
         except Exception as e:
             error_message = str(e)
@@ -119,7 +119,7 @@ class OrderService:
                 type=OrderType.MARKET,
                 size=base_size
             )
-            self._log_order_result(order_response, product_id, str(base_size), spot_price, OrderSide.SELL)
+            self._log_order_result(order_response, product_id, str(base_size), side=OrderSide.SELL)
             return order
         except Exception as e:
             error_message = str(e)
@@ -167,8 +167,8 @@ class OrderService:
         Args:
             product_id (str): The ID of the product.
             fiat_amount (str): The amount of fiat currency.
-            limit_price (Optional[str]): The specific limit price for the order (overrides price_multiplier if provided).
-            price_multiplier (float): The multiplier for the current price (used if limit_price is not provided).
+            limit_price (Optional[str]): The specific limit price for the order.
+            price_multiplier (float): The multiplier for the current price.
             side (OrderSide): The side of the order (buy or sell).
 
         Returns:
@@ -192,9 +192,7 @@ class OrderService:
                         else current_price * Decimal(str(price_multiplier))).quantize(quote_increment)
 
         # Calculate base size
-        base_size = (Decimal(fiat_amount) / adjusted_price if side == OrderSide.SELL
-                    else calculate_base_size(Decimal(fiat_amount), adjusted_price, base_increment))
-        base_size = base_size.quantize(base_increment)
+        base_size = calculate_base_size(Decimal(fiat_amount), adjusted_price, base_increment)
 
         # Place the order
         order_func = (self.rest_client.limit_order_gtc_buy 
@@ -217,7 +215,9 @@ class OrderService:
             price=adjusted_price
         )
         
-        self._log_order_result(order_response, product_id, base_size, adjusted_price, side)
+        # Pass fiat_amount for buy orders, base_size for sell orders
+        amount = fiat_amount if side == OrderSide.BUY else str(base_size)
+        self._log_order_result(order_response, product_id, amount, adjusted_price, side)
         return order
     
     def _log_order_result(self, order: Dict[str, Any], product_id: str, amount: Any, price: Any = None, side: OrderSide = None) -> None:
@@ -228,28 +228,52 @@ class OrderService:
             order (Dict[str, Any]): The order response from Coinbase.
             product_id (str): The ID of the product.
             amount (Any): The actual amount of the order.
-            price (Any, optional): The price of the order (for limit orders).
+            price (Any, optional): The limit price for limit orders, or spot price for market orders.
             side (OrderSide, optional): The side of the order (buy or sell).
         """
         base_currency, quote_currency = product_id.split('-')
-        order_type = "limit" if price else "market"
         side_str = side.name.lower() if side else "unknown"
 
+        # Get product details for proper rounding
+        product_details = self.price_service.get_product_details(product_id)
+        if not product_details:
+            raise ValueError(f"Could not get product details for {product_id}")
+        
+        base_increment = Decimal(product_details['base_increment'])
+        quote_increment = Decimal(product_details['quote_increment'])
+
         if order['success']:
-            if price:
-                total_amount = Decimal(amount) * Decimal(price)
-                log_message = (f"Successfully placed a {order_type} {side_str} order "
-                               f"for {amount} {base_currency} "
-                               f"(${total_amount:.2f}) at a price of {price} {quote_currency}.")
-            else:
-                log_message = (f"Successfully placed a {order_type} {side_str} order "
-                               f"for {amount} {quote_currency} of {base_currency}.")
+            spot_price = price if price else self.price_service.get_spot_price(product_id)
+            
+            if side == OrderSide.BUY:
+                if price:  # Limit order
+                    base_amount = (Decimal(amount) / Decimal(price)).quantize(base_increment)
+                    log_message = (f"Successfully placed a limit buy order "
+                                 f"for {Decimal(amount).quantize(quote_increment)} {quote_currency} of {base_currency} "
+                                 f"(~{base_amount} {base_currency}) at {Decimal(price).quantize(quote_increment)} {quote_currency}")
+                else:  # Market order
+                    base_amount = (Decimal(amount) / Decimal(spot_price)).quantize(base_increment)
+                    log_message = (f"Successfully placed a market buy order "
+                                 f"for {Decimal(amount).quantize(quote_increment)} {quote_currency} of {base_currency} "
+                                 f"(~{base_amount} {base_currency}) at {Decimal(spot_price).quantize(quote_increment)} {quote_currency}")
+            else:  # SELL
+                if price:  # Limit order
+                    fiat_amount = (Decimal(amount) * Decimal(price)).quantize(quote_increment)
+                    log_message = (f"Successfully placed a limit sell order "
+                                 f"for {fiat_amount} {quote_currency} of {base_currency} "
+                                 f"(~{Decimal(amount).quantize(base_increment)} {base_currency}) at {Decimal(price).quantize(quote_increment)} {quote_currency}")
+                else:  # Market order
+                    fiat_amount = (Decimal(amount) * Decimal(spot_price)).quantize(quote_increment)
+                    log_message = (f"Successfully placed a market sell order "
+                                 f"for {fiat_amount} {quote_currency} of {base_currency} "
+                                 f"(~{Decimal(amount).quantize(base_increment)} {base_currency}) at {Decimal(spot_price).quantize(quote_increment)} {quote_currency}")
             logger.info(log_message)
         else:
             failure_reason = order.get('failure_reason', 'Unknown')
             preview_failure_reason = order.get('error_response', {}).get('preview_failure_reason', 'Unknown')
+            order_type = "limit" if price else "market"
             logger.error(f"Failed to place a {order_type} {side_str} order. "
-                         f"Reason: {failure_reason}. "
-                         f"Preview failure reason: {preview_failure_reason}")
+                        f"Reason: {failure_reason}. "
+                        f"Preview failure reason: {preview_failure_reason}")
         
         logger.debug(f"Coinbase response: {order}")
