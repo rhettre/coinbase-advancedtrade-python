@@ -41,18 +41,4 @@ class TestFundsService(unittest.TestCase):
         self.assertEqual(kwargs['data']['amount'], '25.00')
         self.assertEqual(kwargs['data']['currency'], 'USD')
         self.assertEqual(kwargs['data']['payment_method'], 'pm123')
-        self.assertEqual(kwargs['data']['commit'], True)
-
-    def test_withdraw_fiat(self):
-        """Test fiat withdrawal functionality."""
-        mock_response = {'id': 'with123', 'status': 'pending'}
-        self.rest_client.post = Mock(return_value=mock_response)
-        
-        response = self.funds_service.withdraw_fiat(
-            account_id='acc123',
-            payment_method_id='pm123',
-            amount='25.00'
-        )
-        
-        self.assertEqual(response['id'], 'with123')
-        self.rest_client.post.assert_called_once() 
+        self.assertEqual(kwargs['data']['commit'], True) 

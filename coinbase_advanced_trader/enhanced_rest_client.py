@@ -5,9 +5,11 @@ All Coinbase v2 API interactions (signing, URL parsing, and requests) are encaps
 here and used by various service methods.
 """
 
-from typing import Optional, List, Dict, Any
 from decimal import Decimal
+from typing import Any, Dict, List, Optional
+
 from coinbase.rest import RESTClient
+
 from .services.order_service import OrderService
 from .services.fear_and_greed_strategy import FearAndGreedStrategy
 from .services.price_service import PriceService
@@ -16,6 +18,7 @@ from coinbase_advanced_trader.constants import DEFAULT_CONFIG
 from coinbase_advanced_trader.logger import logger
 from coinbase_advanced_trader.services.account_service import AccountService, Account
 from coinbase_advanced_trader.services.funds_service import FundsService
+
 
 class EnhancedRESTClient(RESTClient):
     """Enhanced REST client with additional trading functionalities."""
@@ -34,13 +37,13 @@ class EnhancedRESTClient(RESTClient):
         # Initialize service dependencies
         self._account_service = AccountService(self)
         self._funds_service = FundsService(self)
-        self._price_service = PriceService(self) 
+        self._price_service = PriceService(self)
         self._order_service = OrderService(self, self._price_service)
         self._config = FearAndGreedConfig()
         self._fear_and_greed_strategy = FearAndGreedStrategy(
             self._order_service, self._price_service, self._config
         )
-        
+
     # -------------------------------------------------------------------------
     # Account Services
     # -------------------------------------------------------------------------
@@ -55,7 +58,7 @@ class EnhancedRESTClient(RESTClient):
             The available balance as a Decimal.
         """
         return self._account_service.get_crypto_balance(currency)
-    
+
     def list_held_crypto_balances(self) -> Dict[str, Decimal]:
         """
         Get a dictionary of held cryptocurrencies and their respective balances.
@@ -89,8 +92,8 @@ class EnhancedRESTClient(RESTClient):
             self._config.update_fgi_schedule(new_schedule)
             logger.info("FGI schedule successfully updated.")
             return True
-        except ValueError as e:
-            logger.error(f"Failed to update FGI schedule: {str(e)}")
+        except ValueError as error:
+            logger.error(f"Failed to update FGI schedule: {error}")
             raise
 
     def get_fgi_schedule(self) -> List[Dict[str, Any]]:
@@ -101,7 +104,7 @@ class EnhancedRESTClient(RESTClient):
             The FGI schedule as a list of dictionaries.
         """
         return self._config.get_fgi_schedule()
-    
+
     def validate_fgi_schedule(self, schedule: List[Dict[str, Any]]) -> bool:
         """
         Validate an FGI trading schedule without applying it.
@@ -209,17 +212,20 @@ class EnhancedRESTClient(RESTClient):
         Returns:
             The API response as a dict.
         """
-        return self._fear_and_greed_strategy.execute_trade(
-            product_id, fiat_amount
-        )
-    
+        return self._fear_and_greed_strategy.execute_trade(product_id, fiat_amount)
+
     # -------------------------------------------------------------------------
     # Funds Operations (Delegated to FundsService)
     # Note: The actual funds_service methods (deposit/withdraw)
     # are implemented in the FundsService module.
     # -------------------------------------------------------------------------
     def deposit_fiat(
-        self, account_id: str, payment_method_id: str, amount: str, currency: str = "USD", commit: bool = True
+        self,
+        account_id: str,
+        payment_method_id: str,
+        amount: str,
+        currency: str = "USD",
+        commit: bool = True
     ) -> Dict[str, Any]:
         """
         Deposit fiat into a Coinbase fiat account.
@@ -234,25 +240,9 @@ class EnhancedRESTClient(RESTClient):
         Returns:
             The API response as a dict.
         """
-        return self._funds_service.deposit_fiat(account_id, payment_method_id, amount, currency, commit)
-
-    def withdraw_fiat(
-        self, account_id: str, payment_method_id: str, amount: str, currency: str = "USD", commit: bool = True
-    ) -> Dict[str, Any]:
-        """
-        Withdraw fiat from a Coinbase fiat account.
-
-        Args:
-            account_id: Coinbase account identifier.
-            payment_method_id: Payment method identifier.
-            amount: Amount to withdraw.
-            currency: Currency code (default "USD").
-            commit: Whether to commit immediately.
-
-        Returns:
-            The API response as a dict.
-        """
-        return self._funds_service.withdraw_fiat(account_id, payment_method_id, amount, currency, commit)
+        return self._funds_service.deposit_fiat(
+            account_id, payment_method_id, amount, currency, commit
+        )
 
     def show_deposit_methods(self) -> None:
         """Show all payment methods that allow deposits."""

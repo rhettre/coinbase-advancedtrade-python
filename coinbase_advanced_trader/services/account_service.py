@@ -109,25 +109,6 @@ class AccountService:
             logger.error(f"Error retrieving account for {currency}: {str(e)}")
             raise
 
-    def show_account(self, currency: str) -> None:
-        """Pretty print account details for a specific currency."""
-        try:
-            account = self.get_account_by_currency(currency)
-            if not account:
-                return
-            
-            logger.info(
-                f"\nAccount Details for {currency}:"
-                f"\n  Name: {account.name}"
-                f"\n  UUID: {account.uuid}"
-                f"\n  Type: {account.type}"
-                f"\n  Available Balance: {account.available_balance} {currency}"
-                f"\n  Created: {account.created_at}"
-            )
-        except Exception as e:
-            logger.error(f"Error showing account details: {str(e)}")
-            raise
-
     def list_payment_methods(self) -> List[PaymentMethod]:
         """Get all payment methods without logging."""
         try:

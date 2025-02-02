@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class FundsService:
     """
-    A service class providing fiat deposit/withdrawal functionality,
+    A service class providing fiat deposit functionality,
     implemented using the same authentication mechanism as the EnhancedRESTClient.
     """
 
@@ -99,34 +99,3 @@ class FundsService:
                 f"\n  Amount: {amount} {currency}"
             )
             raise
-
-    def withdraw_fiat(self, account_id: str, payment_method_id: str,
-                      amount: str, currency: str = "USD",
-                      commit: bool = True) -> Dict[str, Any]:
-        """
-        Withdraws a specified fiat amount from a Coinbase fiat account
-        to a given payment method (e.g., bank).
-
-        Args:
-            account_id (str): The Coinbase fiat account ID from which we withdraw.
-            payment_method_id (str): The payment method ID for the withdrawal.
-            amount (str): The stringified amount to withdraw.
-            currency (str): The fiat currency code (default "USD").
-            commit (bool): Whether to commit the withdrawal immediately
-                           (default is True).
-
-        Returns:
-            A dictionary representing the newly created withdrawal resource.
-        """
-        endpoint = f"{self._base_url_v2}/accounts/{account_id}/withdrawals"
-        url = endpoint
-        data = {
-            "type": "withdraw",
-            "amount": amount,
-            "currency": currency,
-            "payment_method": payment_method_id,
-            "commit": str(commit).lower(),
-        }
-        response = self.rest_client.post(url, data)
-        logger.info(f"Fiat withdrawal initiated. account_id={account_id}, amount={amount}, currency={currency}")
-        return response
