@@ -17,7 +17,17 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
    pip install coinbase-advancedtrade-python
    ```
 
-2. Obtain your API key and secret from the Coinbase Developer Platform. The new API key format looks like this:
+2. For development, install test dependencies:
+   ```bash
+   pip install -e ".[test]"
+   ```
+
+3. Run tests:
+   ```bash
+   python -m unittest discover -s coinbase_advanced_trader/tests
+   ```
+
+2. Obtain your API key and secret from the Coinbase Developer Platform. The new API key format looks like:
    ```
    API Key: organizations/{org_id}/apiKeys/{key_id}
    API Secret: -----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----\n
@@ -88,7 +98,7 @@ print(balances)
 
 #### Getting a Specific Crypto Balance
 
-To get the available balance of a specific cryptocurrency in your account (returns 0 if the specified cryptocurrency is not found in the account):
+To get the available balance of a specific cryptocurrency in your account, use `get_crypto_balance`. It leverages the enhanced caching mechanism for efficient data retrieval and returns a Decimal balance (0 if no account is found):
 
 ```python
 balance = client.get_crypto_balance("BTC")
@@ -96,6 +106,56 @@ print(balance)
 ```
 
 Note: Both methods use a caching mechanism to reduce API calls. The account data is cached for one hour before a fresh fetch is made from Coinbase.
+
+#### Enhanced Account Information
+In addition to retrieving basic balances, the `EnhancedRESTClient` supports fetching detailed account information via the `get_account_by_currency` method. This method:
+  - Uses cached account data to quickly locate the account by currency.
+  - Makes an additional API call with the account's UUID to retrieve further details such as:
+      - Account Name
+      - Account Type
+      - Active Status
+      - Account Creation Date
+
+**When to Use This:**  
+Use `get_account_by_currency` if you need comprehensive details for a specific account—for example, when you need to verify account information prior to initiating deposits or withdrawals.
+
+**Example:**
+```python
+# Get detailed account info for the USD account
+account = client.get_account_by_currency("USD")
+if account:
+    print(f"Account UUID: {account.uuid}")
+    print(f"Account Name: {account.name}")
+    print(f"Balance: {account.available_balance} {account.currency}")
+else:
+    print("No account found for USD")
+```
+### Fiat Deposit Example
+
+You can deposit fiat (for example, USD) into your Coinbase account using the deposit functionality. The example below shows how to deposit $25 USD using known account and payment method IDs. (In real use, replace the placeholder IDs with your actual values.)
+
+**Example:**
+
+```python
+from coinbase_advanced_trader.enhanced_rest_client import EnhancedRESTClient
+
+# Initialize your client (ensure your API key and secret are set securely)
+client = EnhancedRESTClient(api_key="your_api_key", api_secret="your_api_secret")
+
+# Show available deposit methods run this before depositing to get the ID of your payment method (bank account, etc)
+client.show_deposit_methods() 
+
+# Deposit $25 USD into your Coinbase account using known IDs
+client.deposit_fiat(
+    account_id="your_usd_account_id",         # Replace with your actual USD account ID (see get_account_by_currency)
+    payment_method_id="your_payment_method_id", # Replace with your actual payment method ID (see show_deposit_methods)
+    amount="25.00",
+    currency="USD"
+)
+```
+
+All deposit details are logged automatically by the service. Be sure to use secure methods for storing and retrieving your keys and account identifiers.
+
 
 ### Usage of Fear and Greed Index
 
@@ -197,23 +257,6 @@ To configure your Lambda function:
 2. Use the provided Lambda layer from the latest release
 3. If building custom layers, ensure they are built using the same Python version as the Lambda runtime.
 
-## Legacy Support
-
-The legacy authentication method is still supported but moved to a separate module. It will not receive the latest updates from the Coinbase SDK. To use the legacy method:
-
-```python
-from coinbase_advanced_trader.legacy.legacy_config import set_api_credentials
-from coinbase_advanced_trader.legacy.strategies.limit_order_strategies import fiat_limit_buy
-
-legacy_key = "your_legacy_key"
-legacy_secret = "your_legacy_secret"
-
-set_api_credentials(legacy_key, legacy_secret)
-
-# Use legacy functions
-limit_buy_order = fiat_limit_buy("BTC-USDC", 10)
-```
-
 ## Documentation
 
 For more information about the Coinbase Advanced Trader API, consult the [official API documentation](https://docs.cdp.coinbase.com/advanced-trade/docs/welcome).
@@ -233,3 +276,4 @@ GitHub: https://github.com/rhettre/coinbase-advancedtrade-python
 ## Disclaimer
 
 This project is not affiliated with, maintained, or endorsed by Coinbase. Use this software at your own risk. Trading cryptocurrencies carries a risk of financial loss. The developers of this software are not responsible for any financial losses or damages incurred while using this software. Nothing in this software should be seen as an inducement to trade with a particular strategy or as financial advice.
+

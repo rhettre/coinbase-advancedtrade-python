@@ -48,12 +48,24 @@ class TestAccountService(unittest.TestCase):
 
     def test_get_crypto_balance(self):
         """Test the get_crypto_balance method."""
+        # Mock the cached accounts data
         mock_accounts = {
             'BTC': {'uuid': 'abc123', 'available_balance': Decimal('1.5')},
             'ETH': {'uuid': 'def456', 'available_balance': Decimal('10.0')}
         }
         self.account_service._get_accounts = Mock(return_value=mock_accounts)
-
+        
+        # Mock the detailed account response
+        mock_detailed_account = {
+            'name': 'BTC Wallet',
+            'type': 'crypto',
+            'active': True,
+            'created_at': '2024-01-01T00:00:00Z'
+        }
+        mock_response = Mock()
+        mock_response.account = mock_detailed_account
+        self.account_service.rest_client.get_account = Mock(return_value=mock_response)
+        
         btc_balance = self.account_service.get_crypto_balance('BTC')
         self.assertEqual(btc_balance, Decimal('1.5'))
 
@@ -110,6 +122,77 @@ class TestAccountService(unittest.TestCase):
         # Third call should fetch from API again
         self.account_service._get_accounts()
         self.rest_client_mock.get_accounts.assert_called_once()
+
+    def test_get_account_by_currency(self):
+        """Test getting detailed account information by currency."""
+        # Mock the cached accounts data
+        mock_accounts = {
+            'USD': {
+                'uuid': 'abc123',
+                'available_balance': Decimal('100.50')
+            }
+        }
+        self.account_service._get_accounts = Mock(return_value=mock_accounts)
+        
+        # Mock the detailed account response
+        mock_detailed_account = {
+            'name': 'USD Wallet',
+            'type': 'fiat',
+            'active': True,
+            'created_at': '2024-01-01T00:00:00Z'
+        }
+        mock_response = Mock()
+        mock_response.account = mock_detailed_account
+        self.account_service.rest_client.get_account = Mock(return_value=mock_response)
+        
+        # Test getting existing account
+        account = self.account_service.get_account_by_currency('USD')
+        self.assertIsNotNone(account)
+        self.assertEqual(account.uuid, 'abc123')
+        self.assertEqual(account.currency, 'USD')
+        self.assertEqual(account.available_balance, Decimal('100.50'))
+        self.assertEqual(account.name, 'USD Wallet')
+        self.assertEqual(account.type, 'fiat')
+        self.assertTrue(account.active)
+        self.assertEqual(account.created_at, '2024-01-01T00:00:00Z')
+        
+        # Test getting non-existent account
+        account = self.account_service.get_account_by_currency('NON_EXISTENT')
+        self.assertIsNone(account)
+
+    def test_list_payment_methods(self):
+        """Test listing payment methods."""
+        # Create mock payment method data
+        mock_method = Mock()
+        mock_method.id = 'pm123'
+        mock_method.type = 'ach_bank_account'
+        mock_method.name = 'Test Bank'
+        mock_method.currency = 'USD'
+        mock_method.allow_deposit = True
+        mock_method.allow_withdraw = True
+        mock_method.verified = True
+        mock_method.created_at = '2024-01-01T00:00:00Z'
+        mock_method.updated_at = '2024-01-02T00:00:00Z'
+        
+        # Mock the response
+        mock_response = Mock()
+        mock_response.payment_methods = [mock_method]
+        self.account_service.rest_client.list_payment_methods = Mock(return_value=mock_response)
+        
+        # Test the method
+        payment_methods = self.account_service.list_payment_methods()
+        
+        self.assertEqual(len(payment_methods), 1)
+        pm = payment_methods[0]
+        self.assertEqual(pm.id, 'pm123')
+        self.assertEqual(pm.type, 'ach_bank_account')
+        self.assertEqual(pm.name, 'Test Bank')
+        self.assertEqual(pm.currency, 'USD')
+        self.assertTrue(pm.allow_deposit)
+        self.assertTrue(pm.allow_withdraw)
+        self.assertTrue(pm.verified)
+        self.assertEqual(pm.created_at, '2024-01-01T00:00:00Z')
+        self.assertEqual(pm.updated_at, '2024-01-02T00:00:00Z')
 
 
 if __name__ == '__main__':
