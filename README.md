@@ -269,8 +269,6 @@ This project is licensed under the MIT License. See the LICENSE file for more in
 
 Rhett Reisman
 
-Email: rhett@rhett.blog
-
 GitHub: https://github.com/rhettre/coinbase-advancedtrade-python
 
 ## Disclaimer
