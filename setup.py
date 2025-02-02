@@ -13,7 +13,6 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     author='Rhett Reisman',
-    author_email='rhett@rhett.blog',
     license='MIT',
     url='https://github.com/rhettre/coinbase-advancedtrade-python',
     packages=find_packages(),
