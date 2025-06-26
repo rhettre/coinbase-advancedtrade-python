@@ -151,7 +151,8 @@ class EnhancedRESTClient(RESTClient):
         product_id: str,
         fiat_amount: str,
         limit_price: Optional[str] = None,
-        price_multiplier: float = DEFAULT_CONFIG['BUY_PRICE_MULTIPLIER']
+        price_multiplier: float = DEFAULT_CONFIG['BUY_PRICE_MULTIPLIER'],
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
     ) -> Dict[str, Any]:
         """
         Execute a fiat limit buy order.
@@ -161,12 +162,13 @@ class EnhancedRESTClient(RESTClient):
             fiat_amount: Amount of fiat to spend.
             limit_price: Desired limit price (optional).
             price_multiplier: Multiplier used if no limit price is provided.
+            post_only: Whether the order should be post-only (maker only).
 
         Returns:
             The API response as a dict.
         """
         return self._order_service.fiat_limit_buy(
-            product_id, fiat_amount, limit_price, price_multiplier
+            product_id, fiat_amount, limit_price, price_multiplier, post_only
         )
 
     def fiat_limit_sell(
@@ -174,7 +176,8 @@ class EnhancedRESTClient(RESTClient):
         product_id: str,
         fiat_amount: str,
         limit_price: Optional[str] = None,
-        price_multiplier: float = DEFAULT_CONFIG['SELL_PRICE_MULTIPLIER']
+        price_multiplier: float = DEFAULT_CONFIG['SELL_PRICE_MULTIPLIER'],
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
     ) -> Dict[str, Any]:
         """
         Execute a fiat limit sell order.
@@ -184,12 +187,13 @@ class EnhancedRESTClient(RESTClient):
             fiat_amount: Amount of fiat to receive.
             limit_price: Desired limit price (optional).
             price_multiplier: Multiplier used if no limit price is provided.
+            post_only: Whether the order should be post-only (maker only).
 
         Returns:
             The API response as a dict.
         """
         return self._order_service.fiat_limit_sell(
-            product_id, fiat_amount, limit_price, price_multiplier
+            product_id, fiat_amount, limit_price, price_multiplier, post_only
         )
 
     # -------------------------------------------------------------------------

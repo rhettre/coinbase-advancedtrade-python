@@ -72,7 +72,7 @@ class TestEnhancedRESTClient(unittest.TestCase):
         result = self.client.fiat_limit_buy(product_id, fiat_amount)
         
         self.client._order_service.fiat_limit_buy.assert_called_once_with(
-            product_id, fiat_amount, None, price_multiplier
+            product_id, fiat_amount, None, price_multiplier, True
         )
 
     def test_fiat_limit_sell(self):
@@ -84,7 +84,7 @@ class TestEnhancedRESTClient(unittest.TestCase):
         result = self.client.fiat_limit_sell(product_id, fiat_amount)
         
         self.client._order_service.fiat_limit_sell.assert_called_once_with(
-            product_id, fiat_amount, None, price_multiplier
+            product_id, fiat_amount, None, price_multiplier, True
         )
 
     def test_trade_based_on_fgi(self):

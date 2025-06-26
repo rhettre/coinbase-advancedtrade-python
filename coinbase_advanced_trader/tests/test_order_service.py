@@ -1,10 +1,11 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from decimal import Decimal
 
 from coinbase_advanced_trader.models import Order, OrderSide, OrderType
 from coinbase_advanced_trader.services.order_service import OrderService
 from coinbase_advanced_trader.services.price_service import PriceService
+from coinbase_advanced_trader.constants import DEFAULT_CONFIG
 
 
 class TestOrderService(unittest.TestCase):
@@ -177,7 +178,7 @@ class TestOrderService(unittest.TestCase):
         }
 
         order = self.order_service._place_limit_order(
-            product_id, fiat_amount, None, price_multiplier, side
+            product_id, fiat_amount, None, price_multiplier, side, post_only=True
         )
         
         self.assertEqual(order.id, 'test-order-id')
@@ -246,6 +247,115 @@ class TestOrderService(unittest.TestCase):
                 )
                 mock_logger.info.assert_called_with(test_case['expected_message'])
                 mock_logger.info.reset_mock()
+
+    def test_post_only_default_true(self):
+        """Test that post_only defaults to True."""
+        product_id = "BTC-USDC"
+        fiat_amount = "10"
+        
+        # Mock responses
+        mock_order_response = {
+            'success': True,
+            'success_response': {
+                'order_id': 'test-order-id',
+                'product_id': product_id,
+                'side': 'BUY'
+            }
+        }
+        self.rest_client_mock.limit_order_gtc_buy.return_value = mock_order_response
+        
+        # Mock price service responses
+        self.price_service_mock.get_spot_price.return_value = Decimal('50000')
+        
+        # Call without specifying post_only
+        order = self.order_service.fiat_limit_buy(product_id, fiat_amount)
+        
+        # Verify that post_only=True was passed to the underlying method
+        self.rest_client_mock.limit_order_gtc_buy.assert_called_once()
+        args, kwargs = self.rest_client_mock.limit_order_gtc_buy.call_args
+        self.assertTrue(kwargs.get('post_only', False))
+
+    def test_post_only_explicit_false(self):
+        """Test that post_only can be explicitly set to False."""
+        product_id = "BTC-USDC"
+        fiat_amount = "10"
+        
+        # Mock responses
+        mock_order_response = {
+            'success': True,
+            'success_response': {
+                'order_id': 'test-order-id',
+                'product_id': product_id,
+                'side': 'BUY'
+            }
+        }
+        self.rest_client_mock.limit_order_gtc_buy.return_value = mock_order_response
+        
+        # Mock price service responses
+        self.price_service_mock.get_spot_price.return_value = Decimal('50000')
+        
+        # Call with explicit post_only=False
+        order = self.order_service.fiat_limit_buy(product_id, fiat_amount, post_only=False)
+        
+        # Verify that post_only=False was passed to the underlying method
+        self.rest_client_mock.limit_order_gtc_buy.assert_called_once()
+        args, kwargs = self.rest_client_mock.limit_order_gtc_buy.call_args
+        self.assertFalse(kwargs.get('post_only', True))
+
+    def test_post_only_sell_orders(self):
+        """Test that post_only works for sell orders."""
+        product_id = "BTC-USDC"
+        fiat_amount = "10"
+        
+        # Mock responses
+        mock_order_response = {
+            'success': True,
+            'success_response': {
+                'order_id': 'test-order-id',
+                'product_id': product_id,
+                'side': 'SELL'
+            }
+        }
+        self.rest_client_mock.limit_order_gtc_sell.return_value = mock_order_response
+        
+        # Mock price service responses
+        self.price_service_mock.get_spot_price.return_value = Decimal('50000')
+        
+        # Test default post_only=True
+        order = self.order_service.fiat_limit_sell(product_id, fiat_amount)
+        
+        # Verify that post_only=True was passed to the underlying method
+        self.rest_client_mock.limit_order_gtc_sell.assert_called_once()
+        args, kwargs = self.rest_client_mock.limit_order_gtc_sell.call_args
+        self.assertTrue(kwargs.get('post_only', False))
+
+    @patch('coinbase_advanced_trader.services.order_service.logger')
+    def test_post_only_rejection_error_handling(self, mock_logger):
+        """Test that post-only rejection errors are properly handled and logged."""
+        product_id = "BTC-USDC"
+        fiat_amount = "10"
+        
+        # Mock price service responses
+        self.price_service_mock.get_spot_price.return_value = Decimal('50000')
+        
+        # Mock the SDK to raise an exception for post-only rejection
+        post_only_error = Exception("Order would immediately match existing orders")
+        self.rest_client_mock.limit_order_gtc_buy.side_effect = post_only_error
+        
+        # Verify that the exception is raised and properly logged
+        with self.assertRaises(Exception):
+            self.order_service.fiat_limit_buy(product_id, fiat_amount, post_only=True)
+        
+        # Check that the specific post-only error message was logged
+        mock_logger.error.assert_called_once()
+        error_call_args = mock_logger.error.call_args[0][0]
+        self.assertIn("Post-only order rejected", error_call_args)
+        self.assertIn("would immediately match", error_call_args)
+
+    def test_configuration_default_post_only(self):
+        """Test that the DEFAULT_CONFIG contains the POST_ONLY_DEFAULT setting."""
+        self.assertIn('POST_ONLY_DEFAULT', DEFAULT_CONFIG)
+        self.assertTrue(DEFAULT_CONFIG['POST_ONLY_DEFAULT'])
 
 
 if __name__ == '__main__':

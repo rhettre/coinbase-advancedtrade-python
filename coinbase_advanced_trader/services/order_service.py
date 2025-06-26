@@ -9,6 +9,7 @@ from coinbase_advanced_trader.trading_config import (
     BUY_PRICE_MULTIPLIER,
     SELL_PRICE_MULTIPLIER
 )
+from coinbase_advanced_trader.constants import DEFAULT_CONFIG
 from coinbase_advanced_trader.logger import logger
 from coinbase_advanced_trader.utils import calculate_base_size
 from .price_service import PriceService
@@ -130,7 +131,14 @@ class OrderService:
                 logger.error(error_log)
             raise
 
-    def fiat_limit_buy(self, product_id: str, fiat_amount: str, limit_price: Optional[str] = None, price_multiplier: float = BUY_PRICE_MULTIPLIER) -> Order:
+    def fiat_limit_buy(
+        self, 
+        product_id: str, 
+        fiat_amount: str, 
+        limit_price: Optional[str] = None, 
+        price_multiplier: float = BUY_PRICE_MULTIPLIER,
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+    ) -> Order:
         """
         Place a limit buy order for a specified fiat amount.
 
@@ -139,13 +147,21 @@ class OrderService:
             fiat_amount (str): The amount of fiat currency to spend.
             limit_price (Optional[str]): The specific limit price for the order (overrides price_multiplier if provided).
             price_multiplier (float): The multiplier for the current price (used if limit_price is not provided).
+            post_only (bool): Whether the order should be post-only (maker only).
 
         Returns:
             Order: The order object containing details about the executed order.
         """
-        return self._place_limit_order(product_id, fiat_amount, limit_price, price_multiplier, OrderSide.BUY)
+        return self._place_limit_order(product_id, fiat_amount, limit_price, price_multiplier, OrderSide.BUY, post_only)
 
-    def fiat_limit_sell(self, product_id: str, fiat_amount: str, limit_price: Optional[str] = None, price_multiplier: float = SELL_PRICE_MULTIPLIER) -> Order:
+    def fiat_limit_sell(
+        self, 
+        product_id: str, 
+        fiat_amount: str, 
+        limit_price: Optional[str] = None, 
+        price_multiplier: float = SELL_PRICE_MULTIPLIER,
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+    ) -> Order:
         """
         Place a limit sell order for a specified fiat amount.
 
@@ -154,13 +170,22 @@ class OrderService:
             fiat_amount (str): The amount of fiat currency to receive.
             limit_price (Optional[str]): The specific limit price for the order (overrides price_multiplier if provided).
             price_multiplier (float): The multiplier for the current price (used if limit_price is not provided).
+            post_only (bool): Whether the order should be post-only (maker only).
 
         Returns:
             Order: The order object containing details about the executed order.
         """
-        return self._place_limit_order(product_id, fiat_amount, limit_price, price_multiplier, OrderSide.SELL)
+        return self._place_limit_order(product_id, fiat_amount, limit_price, price_multiplier, OrderSide.SELL, post_only)
     
-    def _place_limit_order(self, product_id: str, fiat_amount: str, limit_price: Optional[str], price_multiplier: float, side: OrderSide) -> Order:
+    def _place_limit_order(
+        self, 
+        product_id: str, 
+        fiat_amount: str, 
+        limit_price: Optional[str], 
+        price_multiplier: float, 
+        side: OrderSide,
+        post_only: bool
+    ) -> Order:
         """
         Place a limit order.
 
@@ -170,11 +195,12 @@ class OrderService:
             limit_price (Optional[str]): The specific limit price for the order.
             price_multiplier (float): The multiplier for the current price.
             side (OrderSide): The side of the order (buy or sell).
+            post_only (bool): Whether the order should be post-only (maker only).
 
         Returns:
             Order: The order object containing details about the executed order.
         """
-        logger.info(f"Starting limit order placement - Side: {side}, Product: {product_id}")
+        logger.info(f"Starting limit order placement - Side: {side}, Product: {product_id}, Post-only: {post_only}")
         
         current_price = self.price_service.get_spot_price(product_id)
         if current_price is None:
@@ -199,12 +225,24 @@ class OrderService:
                     if side == OrderSide.BUY 
                     else self.rest_client.limit_order_gtc_sell)
         
-        order_response = order_func(
-            self._generate_client_order_id(),
-            product_id,
-            str(base_size),
-            str(adjusted_price)
-        )
+        try:
+            order_response = order_func(
+                self._generate_client_order_id(),
+                product_id,
+                str(base_size),
+                str(adjusted_price),
+                post_only=post_only
+            )
+        except Exception as e:
+            # Handle potential post-only rejection
+            error_message = str(e)
+            if post_only and ("would immediately match" in error_message.lower() or 
+                            "post only" in error_message.lower() or 
+                            "would cross" in error_message.lower()):
+                logger.error(f"Post-only order rejected because it would immediately match. "
+                           f"Product: {product_id}, Side: {side}, Price: {adjusted_price}. "
+                           f"Consider adjusting the price or setting post_only=False.")
+            raise
         
         order = Order(
             id=order_response['success_response']['order_id'],
