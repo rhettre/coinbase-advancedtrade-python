@@ -248,8 +248,8 @@ class TestOrderService(unittest.TestCase):
                 mock_logger.info.assert_called_with(test_case['expected_message'])
                 mock_logger.info.reset_mock()
 
-    def test_post_only_default_true(self):
-        """Test that post_only defaults to True."""
+    def test_post_only_default_false(self):
+        """Test that post_only defaults to False."""
         product_id = "BTC-USDC"
         fiat_amount = "10"
         
@@ -270,13 +270,13 @@ class TestOrderService(unittest.TestCase):
         # Call without specifying post_only
         order = self.order_service.fiat_limit_buy(product_id, fiat_amount)
         
-        # Verify that post_only=True was passed to the underlying method
+        # Verify that post_only=False was passed to the underlying method
         self.rest_client_mock.limit_order_gtc_buy.assert_called_once()
         args, kwargs = self.rest_client_mock.limit_order_gtc_buy.call_args
-        self.assertTrue(kwargs.get('post_only', False))
+        self.assertFalse(kwargs.get('post_only', True))
 
-    def test_post_only_explicit_false(self):
-        """Test that post_only can be explicitly set to False."""
+    def test_post_only_explicit_true(self):
+        """Test that post_only can be explicitly set to True."""
         product_id = "BTC-USDC"
         fiat_amount = "10"
         
@@ -294,13 +294,13 @@ class TestOrderService(unittest.TestCase):
         # Mock price service responses
         self.price_service_mock.get_spot_price.return_value = Decimal('50000')
         
-        # Call with explicit post_only=False
-        order = self.order_service.fiat_limit_buy(product_id, fiat_amount, post_only=False)
+        # Call with explicit post_only=True
+        order = self.order_service.fiat_limit_buy(product_id, fiat_amount, post_only=True)
         
-        # Verify that post_only=False was passed to the underlying method
+        # Verify that post_only=True was passed to the underlying method
         self.rest_client_mock.limit_order_gtc_buy.assert_called_once()
         args, kwargs = self.rest_client_mock.limit_order_gtc_buy.call_args
-        self.assertFalse(kwargs.get('post_only', True))
+        self.assertTrue(kwargs.get('post_only', False))
 
     def test_post_only_sell_orders(self):
         """Test that post_only works for sell orders."""
@@ -321,13 +321,13 @@ class TestOrderService(unittest.TestCase):
         # Mock price service responses
         self.price_service_mock.get_spot_price.return_value = Decimal('50000')
         
-        # Test default post_only=True
+        # Test default post_only=False
         order = self.order_service.fiat_limit_sell(product_id, fiat_amount)
         
-        # Verify that post_only=True was passed to the underlying method
+        # Verify that post_only=False was passed to the underlying method
         self.rest_client_mock.limit_order_gtc_sell.assert_called_once()
         args, kwargs = self.rest_client_mock.limit_order_gtc_sell.call_args
-        self.assertTrue(kwargs.get('post_only', False))
+        self.assertFalse(kwargs.get('post_only', True))
 
     @patch('coinbase_advanced_trader.services.order_service.logger')
     def test_post_only_rejection_error_handling(self, mock_logger):
@@ -355,7 +355,7 @@ class TestOrderService(unittest.TestCase):
     def test_configuration_default_post_only(self):
         """Test that the DEFAULT_CONFIG contains the POST_ONLY_DEFAULT setting."""
         self.assertIn('POST_ONLY_DEFAULT', DEFAULT_CONFIG)
-        self.assertTrue(DEFAULT_CONFIG['POST_ONLY_DEFAULT'])
+        self.assertFalse(DEFAULT_CONFIG['POST_ONLY_DEFAULT'])
 
 
 if __name__ == '__main__':

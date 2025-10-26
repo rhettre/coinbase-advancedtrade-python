@@ -64,52 +64,51 @@ Here's an example of how to use the strategies package to buy $10 worth of Bitco
 # Perform a market buy
 client.fiat_market_buy("BTC-USDC", "10")
 
-# Place a $10 buy order for BTC-USD near the current spot price (post-only by default for lower fees)
+# Place a $10 buy order near the current spot price (allows taker by default)
 client.fiat_limit_buy("BTC-USDC", "10")
 
-# Place a $10 buy order for BTC-USD at a limit price of $10,000 (post-only by default)
+# Force maker-only (post-only) buy for lower fees
+client.fiat_limit_buy("BTC-USDC", "10", post_only=True)
+
+# Place a $10 buy order at a specific limit price (allows taker by default)
 client.fiat_limit_buy("BTC-USDC", "10", "10000")
 
-# Place a $10 buy order that can take liquidity immediately (higher fees)
-client.fiat_limit_buy("BTC-USDC", "10", post_only=False)
+# Force maker-only at a specific limit price
+client.fiat_limit_buy("BTC-USDC", "10", "10000", post_only=True)
 
-# Place a $10 buy order for BTC-USD at a 10% discount from current spot price (post-only by default)
+# Place a $10 buy order at a 10% discount (allows taker by default)
 client.fiat_limit_buy("BTC-USDC", "10", price_multiplier=".90")
 
-# Place a $10 buy order that can take liquidity with price multiplier
-client.fiat_limit_buy("BTC-USDC", "10", price_multiplier=".90", post_only=False)
+# Force maker-only with price multiplier
+client.fiat_limit_buy("BTC-USDC", "10", price_multiplier=".90", post_only=True)
 
-# Place a $10 sell order for BTC-USD at a limit price of $100,000 (post-only by default)
+# Place a $10 sell order at a specific limit price (allows taker by default)
 client.fiat_limit_sell("BTC-USDC", "10", "100000")
 
-# Place a $10 sell order for BTC-USD near the current spot price (post-only by default)
+# Place a $10 sell order near the current spot price (allows taker by default)
 client.fiat_limit_sell("BTC-USDC", "5")
 
-# Place a $10 sell order that can take liquidity immediately (higher fees)
-client.fiat_limit_sell("BTC-USDC", "5", post_only=False)
+# Force maker-only (post-only) sell for lower fees
+client.fiat_limit_sell("BTC-USDC", "5", post_only=True)
 
-# Place a $10 sell order for BTC-USD at a 10% premium to current spot price (post-only by default)
+# Place a $10 sell order at a 10% premium (allows taker by default)
 client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1")
 
-# Place a $10 sell order that can take liquidity with price multiplier
-client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1", post_only=False)
+# Force maker-only with price multiplier
+client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1", post_only=True)
 ```
 
-### Post-Only Orders for Lower Fees
+### Post-Only vs Allow Taker
 
-By default, all limit orders are placed as post-only orders, which means they will only execute as maker orders, earning you lower trading fees. Post-only orders add liquidity to the order book and will be rejected if they would immediately match against existing orders.
+By default, limit orders allow taker execution, meaning they may execute immediately against existing orders (incurring taker fees). To force maker-only execution and qualify for lower fees, pass `post_only=True`. Post-only orders add liquidity and will be rejected if they would immediately match.
 
-**Benefits of Post-Only Orders:**
-- Lower trading fees (maker fees vs taker fees)
-- Guaranteed maker status 
-- Better for algorithmic trading strategies
+**When to use post_only=True:**
+- Lower fees via maker-only fills
+- You prefer resting on the book vs immediate execution
 
-**When to Use Regular Limit Orders (post_only=False):**
-- When you need immediate execution
-- When you're willing to pay higher taker fees for speed
-- During high volatility when post-only orders might be frequently rejected
-
-You can override the post-only default by setting `post_only=False` in any limit order method.
+**When to keep default (post_only=False):**
+- You want immediate execution
+- You accept higher taker fees for speed
 
 ### Account Balance Operations
 
