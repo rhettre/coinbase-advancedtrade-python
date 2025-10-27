@@ -64,24 +64,51 @@ Here's an example of how to use the strategies package to buy $10 worth of Bitco
 # Perform a market buy
 client.fiat_market_buy("BTC-USDC", "10")
 
-#Place a $10 buy order for BTC-USD near the current spot price of BTC-USDC
+# Place a $10 buy order near the current spot price (allows taker by default)
 client.fiat_limit_buy("BTC-USDC", "10")
 
-#Place a $10 buy order for BTC-USD at a limit price of $10,000
+# Force maker-only (post-only) buy for lower fees
+client.fiat_limit_buy("BTC-USDC", "10", post_only=True)
+
+# Place a $10 buy order at a specific limit price (allows taker by default)
 client.fiat_limit_buy("BTC-USDC", "10", "10000")
 
-#Place a $10 buy order for BTC-USD at a 10% discount from the current spot price of BTC-USDC
+# Force maker-only at a specific limit price
+client.fiat_limit_buy("BTC-USDC", "10", "10000", post_only=True)
+
+# Place a $10 buy order at a 10% discount (allows taker by default)
 client.fiat_limit_buy("BTC-USDC", "10", price_multiplier=".90")
 
-#Place a $10 sell order for BTC-USD at a limit price of $100,000
+# Force maker-only with price multiplier
+client.fiat_limit_buy("BTC-USDC", "10", price_multiplier=".90", post_only=True)
+
+# Place a $10 sell order at a specific limit price (allows taker by default)
 client.fiat_limit_sell("BTC-USDC", "10", "100000")
 
-#Place a $10 sell order for BTC-USD near the current spot price of BTC-USDC
+# Place a $10 sell order near the current spot price (allows taker by default)
 client.fiat_limit_sell("BTC-USDC", "5")
 
-#Place a $10 sell order for BTC-USD at a 10% premium to the current spot price of BTC-USDC
+# Force maker-only (post-only) sell for lower fees
+client.fiat_limit_sell("BTC-USDC", "5", post_only=True)
+
+# Place a $10 sell order at a 10% premium (allows taker by default)
 client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1")
+
+# Force maker-only with price multiplier
+client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1", post_only=True)
 ```
+
+### Post-Only vs Allow Taker
+
+By default, limit orders allow taker execution, meaning they may execute immediately against existing orders (incurring taker fees). To force maker-only execution and qualify for lower fees, pass `post_only=True`. Post-only orders add liquidity and will be rejected if they would immediately match.
+
+**When to use post_only=True:**
+- Lower fees via maker-only fills
+- You prefer resting on the book vs immediate execution
+
+**When to keep default (post_only=False):**
+- You want immediate execution
+- You accept higher taker fees for speed
 
 ### Account Balance Operations
 
@@ -269,7 +296,6 @@ This project is licensed under the MIT License. See the LICENSE file for more in
 
 Rhett Reisman
 
-Email: rhett@rhett.blog
 
 GitHub: https://github.com/rhettre/coinbase-advancedtrade-python
 
