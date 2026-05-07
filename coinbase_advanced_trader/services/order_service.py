@@ -1,6 +1,6 @@
 import uuid
-from decimal import Decimal
-from typing import Dict, Any, Optional
+from decimal import Decimal, ROUND_DOWN
+from typing import Dict, Any, Optional, List
 
 from coinbase.rest import RESTClient
 
@@ -11,7 +11,7 @@ from coinbase_advanced_trader.trading_config import (
 )
 from coinbase_advanced_trader.constants import DEFAULT_CONFIG
 from coinbase_advanced_trader.logger import logger
-from coinbase_advanced_trader.utils import calculate_base_size
+from coinbase_advanced_trader.utils import calculate_base_size, ensure_dict
 from .price_service import PriceService
 
 
@@ -34,6 +34,48 @@ class OrderService:
         """Generate a unique client order ID."""
         return str(uuid.uuid4())
 
+    def _order_side_text(self, side: Optional[OrderSide]) -> str:
+        """Return a user-facing side value for logs and errors."""
+        return side.value if isinstance(side, OrderSide) else "unknown"
+
+    def _extract_order_id(self, order_response: Dict[str, Any]) -> str:
+        """Extract an order ID from normalized Coinbase order responses."""
+        success_response = order_response.get('success_response') or {}
+        order_id = order_response.get('order_id') or success_response.get('order_id')
+        if not order_id:
+            raise Exception(f"Coinbase did not return an order_id. Response: {order_response}")
+        return order_id
+
+    def _require_order_success(
+        self,
+        order_response: Any,
+        order_type: str,
+        side: OrderSide
+    ) -> Dict[str, Any]:
+        """Normalize an order response and raise a clear error if it failed."""
+        response_dict = ensure_dict(order_response)
+        if response_dict.get('success'):
+            return response_dict
+
+        error_response = response_dict.get('error_response') or {}
+        error_message = (
+            error_response.get('message')
+            or error_response.get('error_details')
+            or error_response.get('error')
+            or response_dict.get('failure_reason')
+            or 'Unknown error'
+        )
+        preview_failure_reason = (
+            error_response.get('preview_failure_reason')
+            or error_response.get('new_order_failure_reason')
+            or 'Unknown'
+        )
+        error_log = (f"Failed to place a {order_type} {self._order_side_text(side)} order. "
+                     f"Reason: {error_message}. "
+                     f"Preview failure reason: {preview_failure_reason}")
+        logger.error(error_log)
+        raise Exception(error_log)
+
     def fiat_market_buy(self, product_id: str, fiat_amount: str) -> Order:
         """
         Place a market buy order for a specified fiat amount.
@@ -52,24 +94,18 @@ class OrderService:
             order_response = self.rest_client.market_order_buy(
                 self._generate_client_order_id(), product_id, fiat_amount
             )
-            if not order_response['success']:
-                error_response = order_response.get('error_response', {})
-                error_message = error_response.get('message', 'Unknown error')
-                preview_failure_reason = error_response.get('preview_failure_reason', 'Unknown')
-                error_log = (f"Failed to place a market buy order. "
-                             f"Reason: {error_message}. "
-                             f"Preview failure reason: {preview_failure_reason}")
-                logger.error(error_log)
-                raise Exception(error_log)
+            order_response_dict = self._require_order_success(
+                order_response, "market", OrderSide.BUY
+            )
             
             order = Order(
-                id=order_response['success_response']['order_id'],
+                id=self._extract_order_id(order_response_dict),
                 product_id=product_id,
                 side=OrderSide.BUY,
                 type=OrderType.MARKET,
                 size=Decimal(fiat_amount)
             )
-            self._log_order_result(order_response, product_id, fiat_amount, side=OrderSide.BUY)
+            self._log_order_result(order_response_dict, product_id, fiat_amount, side=OrderSide.BUY)
             return order
         except Exception as e:
             error_message = str(e)
@@ -103,24 +139,18 @@ class OrderService:
             order_response = self.rest_client.market_order_sell(
                 self._generate_client_order_id(), product_id, str(base_size)
             )
-            if not order_response['success']:
-                error_response = order_response.get('error_response', {})
-                error_message = error_response.get('message', 'Unknown error')
-                preview_failure_reason = error_response.get('preview_failure_reason', 'Unknown')
-                error_log = (f"Failed to place a market sell order. "
-                             f"Reason: {error_message}. "
-                             f"Preview failure reason: {preview_failure_reason}")
-                logger.error(error_log)
-                raise Exception(error_log)
+            order_response_dict = self._require_order_success(
+                order_response, "market", OrderSide.SELL
+            )
             
             order = Order(
-                id=order_response['success_response']['order_id'],
+                id=self._extract_order_id(order_response_dict),
                 product_id=product_id,
                 side=OrderSide.SELL,
                 type=OrderType.MARKET,
                 size=base_size
             )
-            self._log_order_result(order_response, product_id, str(base_size), side=OrderSide.SELL)
+            self._log_order_result(order_response_dict, product_id, str(base_size), side=OrderSide.SELL)
             return order
         except Exception as e:
             error_message = str(e)
@@ -243,9 +273,13 @@ class OrderService:
                            f"Product: {product_id}, Side: {side}, Price: {adjusted_price}. "
                            f"Consider adjusting the price or setting post_only=False.")
             raise
+
+        order_response_dict = self._require_order_success(
+            order_response, "limit", side
+        )
         
         order = Order(
-            id=order_response['success_response']['order_id'],
+            id=self._extract_order_id(order_response_dict),
             product_id=product_id,
             side=side,
             type=OrderType.LIMIT,
@@ -255,8 +289,107 @@ class OrderService:
         
         # Pass fiat_amount for buy orders, base_size for sell orders
         amount = fiat_amount if side == OrderSide.BUY else str(base_size)
-        self._log_order_result(order_response, product_id, amount, adjusted_price, side)
+        self._log_order_result(order_response_dict, product_id, amount, adjusted_price, side)
         return order
+
+    def limit_sell_base_size(
+        self,
+        product_id: str,
+        base_size: str,
+        limit_price: str,
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+    ) -> Order:
+        """
+        Place a limit sell using a base asset quantity.
+
+        This is useful after a fill event because Coinbase reports the actual
+        filled base quantity directly on the user WebSocket channel.
+        """
+        product_details = self.price_service.get_product_details(product_id)
+        if product_details is None:
+            raise ValueError(f"Could not get product details for {product_id}")
+
+        base_increment = Decimal(product_details['base_increment'])
+        quote_increment = Decimal(product_details['quote_increment'])
+        adjusted_size = Decimal(str(base_size)).quantize(base_increment, rounding=ROUND_DOWN)
+        adjusted_price = Decimal(str(limit_price)).quantize(quote_increment)
+
+        if adjusted_size <= 0:
+            raise ValueError(f"Base size must be greater than 0 for {product_id}")
+
+        try:
+            order_response = self.rest_client.limit_order_gtc_sell(
+                self._generate_client_order_id(),
+                product_id,
+                str(adjusted_size),
+                str(adjusted_price),
+                post_only=post_only
+            )
+        except Exception as e:
+            error_message = str(e)
+            if post_only and ("would immediately match" in error_message.lower() or
+                              "post only" in error_message.lower() or
+                              "would cross" in error_message.lower()):
+                logger.error(f"Post-only order rejected because it would immediately match. "
+                             f"Product: {product_id}, Side: {OrderSide.SELL}, Price: {adjusted_price}. "
+                             f"Consider adjusting the price or setting post_only=False.")
+            raise
+
+        order_response_dict = self._require_order_success(
+            order_response, "limit", OrderSide.SELL
+        )
+        order = Order(
+            id=self._extract_order_id(order_response_dict),
+            product_id=product_id,
+            side=OrderSide.SELL,
+            type=OrderType.LIMIT,
+            size=adjusted_size,
+            price=adjusted_price
+        )
+        self._log_order_result(
+            order_response_dict,
+            product_id,
+            str(adjusted_size),
+            adjusted_price,
+            OrderSide.SELL
+        )
+        return order
+
+    def cancel_open_orders(
+        self,
+        product_id: Optional[str] = None,
+        side: Optional[Any] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Cancel currently open orders, optionally filtered by product and side.
+
+        Returns the normalized Coinbase cancellation result objects.
+        """
+        product_ids = [product_id] if product_id else None
+        order_side = None
+        if side:
+            order_side = side.value.upper() if isinstance(side, OrderSide) else str(side).upper()
+
+        orders_response = self.rest_client.list_orders(
+            product_ids=product_ids,
+            order_status=["OPEN"],
+            order_side=order_side
+        )
+        open_orders = ensure_dict(orders_response).get('orders', [])
+        order_ids = [
+            order.get('order_id')
+            for order in open_orders
+            if order.get('order_id')
+        ]
+
+        if not order_ids:
+            logger.info("No open orders matched the cancel request.")
+            return []
+
+        cancel_response = self.rest_client.cancel_orders(order_ids)
+        results = ensure_dict(cancel_response).get('results', [])
+        logger.info(f"Requested cancellation for {len(order_ids)} open order(s).")
+        return results
     
     def _log_order_result(self, order: Dict[str, Any], product_id: str, amount: Any, price: Any = None, side: OrderSide = None) -> None:
         """
@@ -269,6 +402,7 @@ class OrderService:
             price (Any, optional): The limit price for limit orders, or spot price for market orders.
             side (OrderSide, optional): The side of the order (buy or sell).
         """
+        order = ensure_dict(order)
         base_currency, quote_currency = product_id.split('-')
         side_str = side.name.lower() if side else "unknown"
 

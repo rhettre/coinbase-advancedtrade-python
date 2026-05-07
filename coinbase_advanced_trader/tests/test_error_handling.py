@@ -95,7 +95,7 @@ class TestErrorHandling(unittest.TestCase):
         self.assertIn("Failed to place a market buy order", str(context.exception))
         mock_logger.error.assert_called_once_with(
             "Failed to place a market buy order. "
-            "Reason: . "
+            "Reason: UNKNOWN_FAILURE_REASON. "
             "Preview failure reason: PREVIEW_INVALID_QUOTE_SIZE_TOO_LARGE"
         )
 

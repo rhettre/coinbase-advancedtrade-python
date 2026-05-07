@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from coinbase.rest import RESTClient
 
 from coinbase_advanced_trader.logger import logger
+from coinbase_advanced_trader.utils import ensure_dict, get_response_value
 
 @dataclass
 class Account:
@@ -43,12 +44,13 @@ class AccountService:
         (datetime.now() - self._cache_timestamp) > self._cache_duration:
             logger.info("Fetching fresh account data from Coinbase")
             response = self.rest_client.get_accounts(limit=limit)
+            response_dict = ensure_dict(response)
             self._accounts_cache = {
                 account['currency']: {
                     'uuid': account['uuid'],
                     'available_balance': Decimal(account['available_balance']['value'])
                 }
-                for account in response['accounts']
+                for account in response_dict.get('accounts', [])
             }
             logger.debug(f"Processed accounts cache: {self._accounts_cache}")
             self._cache_timestamp = datetime.now()
@@ -94,16 +96,16 @@ class AccountService:
             # Get detailed account info using the UUID we found
             account_uuid = accounts[currency]['uuid']
             detailed_response = self.rest_client.get_account(account_uuid)
-            detailed_account = detailed_response.account
+            detailed_account = ensure_dict(detailed_response).get('account', {})
             
             return Account(
                 uuid=account_uuid,
                 currency=currency,
                 available_balance=accounts[currency]['available_balance'],
-                name=detailed_account['name'],
-                type=detailed_account['type'],
-                active=detailed_account['active'],
-                created_at=detailed_account['created_at']
+                name=get_response_value(detailed_account, 'name'),
+                type=get_response_value(detailed_account, 'type'),
+                active=get_response_value(detailed_account, 'active'),
+                created_at=get_response_value(detailed_account, 'created_at')
             )
         except Exception as e:
             logger.error(f"Error retrieving account for {currency}: {str(e)}")
@@ -113,19 +115,20 @@ class AccountService:
         """Get all payment methods without logging."""
         try:
             response = self.rest_client.list_payment_methods()
+            response_dict = ensure_dict(response)
             return [
                 PaymentMethod(
-                    id=method.id,
-                    type=method.type,
-                    name=method.name,
-                    currency=method.currency,
-                    allow_deposit=method.allow_deposit,
-                    allow_withdraw=method.allow_withdraw,
-                    verified=method.verified,
-                    created_at=method.created_at,
-                    updated_at=method.updated_at
+                    id=get_response_value(method, 'id'),
+                    type=get_response_value(method, 'type'),
+                    name=get_response_value(method, 'name'),
+                    currency=get_response_value(method, 'currency'),
+                    allow_deposit=get_response_value(method, 'allow_deposit'),
+                    allow_withdraw=get_response_value(method, 'allow_withdraw'),
+                    verified=get_response_value(method, 'verified'),
+                    created_at=get_response_value(method, 'created_at'),
+                    updated_at=get_response_value(method, 'updated_at')
                 )
-                for method in response.payment_methods
+                for method in response_dict.get('payment_methods', [])
             ]
         except Exception as e:
             logger.error(f"Error listing payment methods: {str(e)}")

@@ -7,6 +7,9 @@ dist/
 *.egg-info/
 *.rst
 venv/
+.venv/
+.env
+.env.*
 *log.txt
 coinbase_advanced_trader/__pycache__/
 coinbase_advanced_trader/legacy/__pycache__/
@@ -18,4 +21,5 @@ tests/__pycache__/
 test.py
 promptlib/
 *.log
+video_*.py
 !requirements.txt
