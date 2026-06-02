@@ -7,6 +7,11 @@ from coinbase_advanced_trader.models import Order, OrderSide, OrderType
 from coinbase_advanced_trader.services.order_service import OrderService
 from coinbase_advanced_trader.services.price_service import PriceService
 from coinbase_advanced_trader.services.fear_and_greed_strategy import FearAndGreedStrategy
+from coinbase_advanced_trader.services.strategy_planner_service import (
+    StrategyPlannerService,
+    VolatilityTargetedTrendPlan,
+)
+from coinbase_advanced_trader.services.websocket_service import OrderEvent, WebsocketService
 from coinbase_advanced_trader.trading_config import FearAndGreedConfig
 
 
@@ -20,6 +25,8 @@ class TestEnhancedRESTClient(unittest.TestCase):
         self.client = EnhancedRESTClient(self.api_key, self.api_secret)
         self.client._order_service = Mock(spec=OrderService)
         self.client._price_service = Mock(spec=PriceService)
+        self.client._websocket_service = Mock(spec=WebsocketService)
+        self.client._strategy_planner_service = Mock(spec=StrategyPlannerService)
         self.client._fear_and_greed_strategy = Mock(spec=FearAndGreedStrategy)
         self.client._config = Mock(spec=FearAndGreedConfig)
 
@@ -86,6 +93,128 @@ class TestEnhancedRESTClient(unittest.TestCase):
         self.client._order_service.fiat_limit_sell.assert_called_once_with(
             product_id, fiat_amount, None, price_multiplier, False
         )
+
+    def test_watch_ticker_delegates_to_websocket_service(self):
+        """Test the watch_ticker helper delegates to the WebSocket service."""
+        self.client.watch_ticker(["BTC-USDC"], seconds=5, print_prices=False)
+
+        self.client._websocket_service.watch_ticker.assert_called_once_with(
+            product_ids=["BTC-USDC"],
+            seconds=5,
+            callback=None,
+            print_prices=False,
+            retry=True,
+            verbose=False,
+        )
+
+    def test_wait_for_order_fill_delegates_to_websocket_service(self):
+        """Test the wait_for_order_fill helper delegates to the WebSocket service."""
+        self.client.wait_for_order_fill("order-123", "BTC-USDC", timeout=60)
+
+        self.client._websocket_service.wait_for_order_fill.assert_called_once_with(
+            order_id="order-123",
+            product_id="BTC-USDC",
+            timeout=60,
+            callback=None,
+            include_heartbeats=True,
+            retry=True,
+            verbose=False,
+        )
+
+    def test_buy_then_limit_sell_on_fill_places_take_profit_order(self):
+        """Test the buy, wait-for-fill, then limit-sell workflow."""
+        buy_order = Order(
+            id='buy-order-id',
+            product_id='BTC-USDC',
+            side=OrderSide.BUY,
+            type=OrderType.MARKET,
+            size=Decimal('10')
+        )
+        fill = OrderEvent(
+            order_id='buy-order-id',
+            product_id='BTC-USDC',
+            status='FILLED',
+            side='BUY',
+            filled_size=Decimal('0.0002'),
+            average_filled_price=Decimal('50000'),
+            filled_value=Decimal('10'),
+            total_fees=Decimal('0.05'),
+            raw_order={}
+        )
+        sell_order = Order(
+            id='sell-order-id',
+            product_id='BTC-USDC',
+            side=OrderSide.SELL,
+            type=OrderType.LIMIT,
+            size=Decimal('0.0002'),
+            price=Decimal('52500.00')
+        )
+        self.client._order_service.fiat_market_buy.return_value = buy_order
+        self.client._websocket_service.place_order_and_wait_for_fill.side_effect = (
+            lambda product_id, place_order, timeout, callback: (place_order(), fill)
+        )
+        self.client._order_service.limit_sell_base_size.return_value = sell_order
+
+        result = self.client.buy_then_limit_sell_on_fill(
+            product_id='BTC-USDC',
+            fiat_amount='10',
+            sell_price_multiplier='1.05',
+            timeout=60
+        )
+
+        self.client._order_service.fiat_market_buy.assert_called_once_with(
+            'BTC-USDC', '10'
+        )
+        self.client._websocket_service.place_order_and_wait_for_fill.assert_called_once()
+        self.client._order_service.limit_sell_base_size.assert_called_once_with(
+            'BTC-USDC',
+            '0.0002',
+            '52500.00',
+            False
+        )
+        self.assertEqual(result['buy_order'], buy_order)
+        self.assertEqual(result['fill'], fill)
+        self.assertEqual(result['sell_order'], sell_order)
+        self.assertEqual(result['sell_limit_price'], Decimal('52500.00'))
+
+    def test_build_volatility_targeted_trend_plan_delegates_to_strategy_planner(self):
+        """Test the volatility-targeted trend planner delegates to the service."""
+        expected_plan = VolatilityTargetedTrendPlan(
+            product_id='BTC-USDC',
+            signal='BUY',
+            latest_close=Decimal('50000'),
+            trend_return=Decimal('0.1000'),
+            realized_annual_volatility=Decimal('0.4000'),
+            target_annual_volatility=Decimal('0.0800'),
+            exposure_fraction=Decimal('0.2000'),
+            max_quote_budget=Decimal('100'),
+            target_quote_notional=Decimal('20.00'),
+            candles_used=121,
+            lookback_days=120,
+            momentum_days=30,
+            reason='test'
+        )
+        planner = self.client._strategy_planner_service
+        planner.build_volatility_targeted_trend_plan.return_value = expected_plan
+
+        result = self.client.build_volatility_targeted_trend_plan(
+            product_id='BTC-USDC',
+            quote_budget='100',
+            lookback_days=120,
+            momentum_days=30,
+            target_annual_volatility='0.08',
+            max_exposure_fraction='1',
+        )
+
+        planner.build_volatility_targeted_trend_plan.assert_called_once_with(
+            product_id='BTC-USDC',
+            quote_budget='100',
+            lookback_days=120,
+            momentum_days=30,
+            target_annual_volatility='0.08',
+            max_exposure_fraction='1',
+        )
+        self.assertEqual(result, expected_plan)
 
     def test_trade_based_on_fgi(self):
         """Test the trade_based_on_fgi method."""

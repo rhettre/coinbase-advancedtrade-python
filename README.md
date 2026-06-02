@@ -8,6 +8,7 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 - Supports the new Coinbase Cloud authentication method
 - Built on top of the official [Coinbase Python SDK](https://github.com/coinbase/coinbase-advanced-py) for improved stability
 - Supports all endpoints and methods provided by the official API
+- Adds beginner-friendly WebSocket workflows for live prices, user order events, and fill-driven automation
 - Added support for trading strategies covered on the [YouTube channel](https://rhett.blog/youtube)
 
 ## Setup
@@ -19,7 +20,8 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 
 2. For development, install test dependencies:
    ```bash
-   pip install -e ".[test]"
+   pip install -e .
+   pip install -r test-requirements.txt
    ```
 
 3. Run tests:
@@ -27,7 +29,7 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
    python -m unittest discover -s coinbase_advanced_trader/tests
    ```
 
-2. Obtain your API key and secret from the Coinbase Developer Platform. The new API key format looks like:
+4. Obtain your API key and secret from the Coinbase Developer Platform. The new API key format looks like:
    ```
    API Key: organizations/{org_id}/apiKeys/{key_id}
    API Secret: -----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----\n
@@ -44,6 +46,19 @@ api_key = "organizations/{org_id}/apiKeys/{key_id}"
 api_secret = "-----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----\n"
 
 client = EnhancedRESTClient(api_key=api_key, api_secret=api_secret)
+```
+
+You can also use environment variables, which is the recommended pattern for long-running bots and cloud deployment:
+
+```bash
+export COINBASE_API_KEY="organizations/{org_id}/apiKeys/{key_id}"
+export COINBASE_API_SECRET="-----BEGIN EC PRIVATE KEY-----\n...\n-----END EC PRIVATE KEY-----\n"
+```
+
+```python
+from coinbase_advanced_trader import EnhancedRESTClient
+
+client = EnhancedRESTClient()
 ```
 
 ## Using the Official SDK
@@ -96,6 +111,132 @@ client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1")
 
 # Force maker-only with price multiplier
 client.fiat_limit_sell("BTC-USDC", "5", price_multiplier="1.1", post_only=True)
+```
+
+### WebSocket Tutorial Helpers
+
+REST asks Coinbase for the latest state. WebSockets let Coinbase push live events to your script. The official SDK already exposes all low-level channels, so this wrapper focuses on practical workflows.
+
+The tutorial series is built around a conservative framing:
+
+- Slow strategy logic can use REST candles and reference data.
+- Live order handling should use the authenticated WebSocket user channel.
+- No helper can guarantee daily or weekly profit; fees, slippage, volatility, and venue risk still matter.
+
+#### Public Live Prices
+
+This demo does not require an API key:
+
+```python
+from coinbase_advanced_trader import EnhancedRESTClient
+
+client = EnhancedRESTClient()
+
+client.watch_prices(["BTC-USDC", "ETH-USDC"], seconds=10)
+```
+
+Use a callback when you want to control the output:
+
+```python
+def print_price(update):
+    print(f"{update.product_id}: {update.price}")
+
+client.watch_ticker(
+    ["BTC-USDC", "ETH-USDC"],
+    seconds=10,
+    callback=print_price,
+    print_prices=False
+)
+```
+
+#### Authenticated Order Events
+
+The `user` channel reports live order updates such as open, filled, and cancelled events. This requires API keys with the right Coinbase permissions:
+
+```python
+from coinbase_advanced_trader import EnhancedRESTClient
+
+client = EnhancedRESTClient()
+
+def print_order_event(event):
+    print(
+        event.order_id,
+        event.product_id,
+        event.status,
+        event.filled_size,
+        event.average_filled_price
+    )
+
+client.watch_order_events(
+    ["BTC-USDC"],
+    callback=print_order_event,
+    seconds=60
+)
+```
+
+#### Wait for a Fill
+
+This is the first wrapper-level WebSocket business case: place an order, then wait for Coinbase to push the fill event instead of polling REST in a loop.
+
+```python
+order = client.fiat_market_buy("BTC-USDC", "10")
+
+fill = client.wait_for_order_fill(
+    order_id=order.id,
+    product_id="BTC-USDC",
+    timeout=300
+)
+
+print(fill.filled_size, fill.average_filled_price)
+```
+
+#### Buy, Then Place a Take-Profit Sell
+
+This helper places a fiat market buy, waits for the actual fill, then places a sell limit order using the filled base size and average fill price.
+It opens the authenticated user WebSocket before sending the buy order, which helps avoid missing very fast market-order fill events.
+
+```python
+result = client.buy_then_limit_sell_on_fill(
+    product_id="BTC-USDC",
+    fiat_amount="10",
+    sell_price_multiplier="1.05"
+)
+
+print(result["buy_order"].id)
+print(result["fill"].average_filled_price)
+print(result["sell_order"].id)
+```
+
+This is a take-profit automation, not guaranteed profit or spread capture. Fees, slippage, and price movement still matter.
+
+#### Dry-Run Volatility-Targeted Trend Plan
+
+For a more trader-focused demo, start with a plan that does not place orders. This helper reads public daily candles, checks the recent trend, estimates annualized volatility using 365-day crypto annualization, and returns a long-only target notional.
+
+```python
+from coinbase_advanced_trader import EnhancedRESTClient
+
+client = EnhancedRESTClient()
+
+plan = client.build_volatility_targeted_trend_plan(
+    product_id="BTC-USDC",
+    quote_budget="100",
+    lookback_days=120,
+    momentum_days=30,
+    target_annual_volatility="0.08"
+)
+
+print(plan.as_dict())
+```
+
+This is a dry-run planning helper, not an execution signal by itself. A practical bot should still apply fee checks, account constraints, position limits, and explicit approval or additional execution logic before placing orders.
+
+#### Safety Helper
+
+For demos where you place far-away or post-only orders, you can clean up open orders:
+
+```python
+client.cancel_open_orders(product_id="BTC-USDC")
 ```
 
 ### Post-Only vs Allow Taker
@@ -284,6 +425,8 @@ To configure your Lambda function:
 2. Use the provided Lambda layer from the latest release
 3. If building custom layers, ensure they are built using the same Python version as the Lambda runtime.
 
+Lambda is a good fit for scheduled REST jobs, such as a once-per-day buy script. Persistent WebSocket bots are a different shape: run them on always-on compute such as a small EC2 instance with `systemd`, Docker, or another process manager that can restart the bot and keep logs.
+
 ## Documentation
 
 For more information about the Coinbase Advanced Trader API, consult the [official API documentation](https://docs.cdp.coinbase.com/advanced-trade/docs/welcome).
@@ -302,4 +445,3 @@ GitHub: https://github.com/rhettre/coinbase-advancedtrade-python
 ## Disclaimer
 
 This project is not affiliated with, maintained, or endorsed by Coinbase. Use this software at your own risk. Trading cryptocurrencies carries a risk of financial loss. The developers of this software are not responsible for any financial losses or damages incurred while using this software. Nothing in this software should be seen as an inducement to trade with a particular strategy or as financial advice.
-

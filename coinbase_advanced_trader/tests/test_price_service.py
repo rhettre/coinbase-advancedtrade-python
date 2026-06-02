@@ -7,6 +7,14 @@ from coinbase.rest import RESTClient
 from coinbase_advanced_trader.services.price_service import PriceService
 
 
+class FakeSDKResponse:
+    def __init__(self, data):
+        self._data = data
+
+    def to_dict(self):
+        return self._data
+
+
 class TestPriceService(unittest.TestCase):
     """Test cases for the PriceService class."""
 
@@ -29,6 +37,20 @@ class TestPriceService(unittest.TestCase):
 
         self.rest_client_mock.get_product.assert_called_once_with(product_id)
         self.assertEqual(result, Decimal('61536.00'))
+
+    def test_get_product_details_accepts_sdk_response_object(self):
+        """Test product details work with official SDK-style response objects."""
+        product_id = "BTC-USDC"
+        self.rest_client_mock.get_product.return_value = FakeSDKResponse({
+            'product_id': 'BTC-USDC',
+            'base_increment': '0.00000001',
+            'quote_increment': '0.01'
+        })
+
+        result = self.price_service.get_product_details(product_id)
+
+        self.assertEqual(result['base_increment'], Decimal('0.00000001'))
+        self.assertEqual(result['quote_increment'], Decimal('0.01'))
 
     def test_get_spot_price_missing_price(self):
         """Test handling of missing price in API response."""

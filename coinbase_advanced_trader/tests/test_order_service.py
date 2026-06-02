@@ -8,6 +8,16 @@ from coinbase_advanced_trader.services.price_service import PriceService
 from coinbase_advanced_trader.constants import DEFAULT_CONFIG
 
 
+class FakeSDKResponse:
+    """Small stand-in for official SDK response objects."""
+
+    def __init__(self, data):
+        self._data = data
+
+    def to_dict(self):
+        return self._data
+
+
 class TestOrderService(unittest.TestCase):
     """Test cases for the OrderService class."""
 
@@ -52,6 +62,28 @@ class TestOrderService(unittest.TestCase):
         self.assertEqual(order.side, OrderSide.BUY)
         self.assertEqual(order.type, OrderType.MARKET)
         self.assertEqual(order.size, Decimal('10'))
+
+    def test_fiat_market_buy_accepts_sdk_response_object(self):
+        """Test market buy works with official SDK-style response objects."""
+        product_id = "BTC-USDC"
+        fiat_amount = "10"
+        self.price_service_mock.get_spot_price.return_value = Decimal('50000.00')
+        self.rest_client_mock.market_order_buy.return_value = FakeSDKResponse({
+            'success': True,
+            'order_id': 'object-order-id',
+            'success_response': {
+                'order_id': 'object-order-id',
+                'product_id': 'BTC-USDC',
+                'side': 'BUY',
+                'client_order_id': '1234567890'
+            },
+            'order_configuration': {'market_market_ioc': {'quote_size': '10'}}
+        })
+
+        order = self.order_service.fiat_market_buy(product_id, fiat_amount)
+
+        self.assertEqual(order.id, 'object-order-id')
+        self.assertEqual(order.product_id, product_id)
 
     def test_fiat_market_sell(self):
         """Test the fiat_market_sell method."""
@@ -182,6 +214,70 @@ class TestOrderService(unittest.TestCase):
         )
         
         self.assertEqual(order.id, 'test-order-id')
+
+    def test_limit_sell_base_size(self):
+        """Test placing a limit sell with an exact base size."""
+        product_id = "BTC-USDC"
+        mock_order_response = {
+            'success': True,
+            'success_response': {
+                'order_id': 'sell-order-id',
+                'product_id': product_id,
+                'side': 'SELL'
+            }
+        }
+        self.rest_client_mock.limit_order_gtc_sell.return_value = mock_order_response
+        self.price_service_mock.get_product_details.return_value = {
+            'base_increment': Decimal('0.00000001'),
+            'quote_increment': Decimal('0.01')
+        }
+
+        order = self.order_service.limit_sell_base_size(
+            product_id,
+            '0.123456789',
+            '50000.009',
+            post_only=True
+        )
+
+        self.assertEqual(order.id, 'sell-order-id')
+        self.assertEqual(order.size, Decimal('0.12345678'))
+        self.assertEqual(order.price, Decimal('50000.01'))
+        self.rest_client_mock.limit_order_gtc_sell.assert_called_once()
+        args, kwargs = self.rest_client_mock.limit_order_gtc_sell.call_args
+        self.assertEqual(args[1], product_id)
+        self.assertEqual(args[2], '0.12345678')
+        self.assertEqual(args[3], '50000.01')
+        self.assertTrue(kwargs['post_only'])
+
+    def test_cancel_open_orders(self):
+        """Test cancelling open orders with product and side filters."""
+        self.rest_client_mock.list_orders.return_value = {
+            'orders': [
+                {'order_id': 'order-1', 'product_id': 'BTC-USDC'},
+                {'order_id': 'order-2', 'product_id': 'BTC-USDC'}
+            ]
+        }
+        self.rest_client_mock.cancel_orders.return_value = {
+            'results': [
+                {'success': True, 'order_id': 'order-1'},
+                {'success': True, 'order_id': 'order-2'}
+            ]
+        }
+
+        results = self.order_service.cancel_open_orders(
+            product_id='BTC-USDC',
+            side=OrderSide.SELL
+        )
+
+        self.rest_client_mock.list_orders.assert_called_once_with(
+            product_ids=['BTC-USDC'],
+            order_status=['OPEN'],
+            order_side='SELL'
+        )
+        self.rest_client_mock.cancel_orders.assert_called_once_with(
+            ['order-1', 'order-2']
+        )
+        self.assertEqual(len(results), 2)
 
     @patch('coinbase_advanced_trader.services.order_service.logger')
     def test_log_order_result(self, mock_logger):

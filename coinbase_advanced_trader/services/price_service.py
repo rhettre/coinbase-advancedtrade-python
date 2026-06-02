@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional
 from coinbase.rest import RESTClient
 
 from coinbase_advanced_trader.logger import logger
+from coinbase_advanced_trader.utils import ensure_dict
 
 
 class PriceService:
@@ -30,9 +31,7 @@ class PriceService:
         """
         try:
             response = self.rest_client.get_product(product_id)
-            
-            # Convert response to dictionary if it's a GetProductResponse object
-            response_dict = response if isinstance(response, dict) else response.__dict__
+            response_dict = ensure_dict(response)
             
             if 'price' not in response_dict or 'quote_increment' not in response_dict:
                 logger.error(f"Required fields missing in response for {product_id}")
@@ -58,9 +57,10 @@ class PriceService:
         """
         try:
             response = self.rest_client.get_product(product_id)
+            response_dict = ensure_dict(response)
             return {
-                'base_increment': Decimal(response['base_increment']),
-                'quote_increment': Decimal(response['quote_increment'])
+                'base_increment': Decimal(response_dict['base_increment']),
+                'quote_increment': Decimal(response_dict['quote_increment'])
             }
         except Exception as e:
             logger.error(f"Error fetching product details for {product_id}: {e}")
