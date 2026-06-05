@@ -36,9 +36,9 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: '3.14'
 
     - name: Install dependencies
       run: |
@@ -83,9 +83,9 @@ jobs:
         echo "RELEASE_URL=${RELEASE_URL}" >> $GITHUB_ENV
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: '3.14'
 
     - name: Install dependencies
       run: |
@@ -100,17 +100,17 @@ jobs:
         mkdir python
         PACKAGE_VERSION=$(python setup.py --version)
         echo "coinbase-advancedtrade-python==$PACKAGE_VERSION" > requirements.txt
-        docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.12:latest /bin/sh -c \
+        docker run --rm -v "$PWD":/var/task public.ecr.aws/sam/build-python3.14:latest /bin/sh -c \
           "pip install setuptools wheel && \
            pip install \
            --platform manylinux2014_x86_64 \
            --only-binary=:all: \
            --implementation cp \
-           --python-version 3.12 \
+           --python-version 3.14 \
            --upgrade \
            -r requirements.txt \
            -t python"
-        zip -r layer-python3.12-x86_64.zip python
+        zip -r layer-python3.14-x86_64.zip python
 
     - name: Upload Layer to Release
       uses: actions/upload-release-asset@v1
@@ -118,6 +118,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ github.event_name == 'release' && github.event.release.upload_url || env.RELEASE_URL }}
-        asset_path: ./layer-python3.12-x86_64.zip
-        asset_name: layer-python3.12-x86_64.zip
+        asset_path: ./layer-python3.14-x86_64.zip
+        asset_name: layer-python3.14-x86_64.zip
         asset_content_type: application/zip

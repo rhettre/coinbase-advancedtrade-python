@@ -57,32 +57,48 @@ class EnhancedRESTClient(RESTClient):
         self._strategy_planner_service = StrategyPlannerService(self)
         self._config = FearAndGreedConfig()
         self._fear_and_greed_strategy = FearAndGreedStrategy(
-            self._order_service, self._price_service, self._config
+            self._order_service,
+            self._price_service,
+            self._config,
+            self._account_service,
         )
 
     # -------------------------------------------------------------------------
     # Account Services
     # -------------------------------------------------------------------------
-    def get_crypto_balance(self, currency: str) -> Decimal:
+    def get_crypto_balance(
+        self,
+        currency: str,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Decimal:
         """
         Get the available balance of a specific cryptocurrency.
 
         Args:
             currency: The currency code (e.g., 'BTC', 'ETH', 'USDC').
+            retail_portfolio_id: Optional Coinbase portfolio UUID.
 
         Returns:
             The available balance as a Decimal.
         """
-        return self._account_service.get_crypto_balance(currency)
+        return self._account_service.get_crypto_balance(
+            currency,
+            retail_portfolio_id=retail_portfolio_id
+        )
 
-    def list_held_crypto_balances(self) -> Dict[str, Decimal]:
+    def list_held_crypto_balances(
+        self,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Dict[str, Decimal]:
         """
         Get a dictionary of held cryptocurrencies and their respective balances.
 
         Returns:
             A dict mapping currency codes to their balances.
         """
-        return self._account_service.list_held_crypto_balances()
+        return self._account_service.list_held_crypto_balances(
+            retail_portfolio_id=retail_portfolio_id
+        )
 
     # -------------------------------------------------------------------------
     # Fear and Greed Index Trading Configuration
@@ -136,7 +152,13 @@ class EnhancedRESTClient(RESTClient):
     # -------------------------------------------------------------------------
     # Fiat Trading (Market and Limit Orders)
     # -------------------------------------------------------------------------
-    def fiat_market_buy(self, product_id: str, fiat_amount: str) -> Dict[str, Any]:
+    def fiat_market_buy(
+        self,
+        product_id: str,
+        fiat_amount: str,
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Execute a fiat market buy order.
 
@@ -147,9 +169,20 @@ class EnhancedRESTClient(RESTClient):
         Returns:
             The API response as a dict.
         """
-        return self._order_service.fiat_market_buy(product_id, fiat_amount)
+        return self._order_service.fiat_market_buy(
+            product_id,
+            fiat_amount,
+            client_order_id=client_order_id,
+            retail_portfolio_id=retail_portfolio_id
+        )
 
-    def fiat_market_sell(self, product_id: str, fiat_amount: str) -> Dict[str, Any]:
+    def fiat_market_sell(
+        self,
+        product_id: str,
+        fiat_amount: str,
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Execute a fiat market sell order.
 
@@ -160,7 +193,12 @@ class EnhancedRESTClient(RESTClient):
         Returns:
             The API response as a dict.
         """
-        return self._order_service.fiat_market_sell(product_id, fiat_amount)
+        return self._order_service.fiat_market_sell(
+            product_id,
+            fiat_amount,
+            client_order_id=client_order_id,
+            retail_portfolio_id=retail_portfolio_id
+        )
 
     def fiat_limit_buy(
         self,
@@ -168,7 +206,9 @@ class EnhancedRESTClient(RESTClient):
         fiat_amount: str,
         limit_price: Optional[str] = None,
         price_multiplier: float = DEFAULT_CONFIG['BUY_PRICE_MULTIPLIER'],
-        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT'],
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Execute a fiat limit buy order.
@@ -184,7 +224,13 @@ class EnhancedRESTClient(RESTClient):
             The API response as a dict.
         """
         return self._order_service.fiat_limit_buy(
-            product_id, fiat_amount, limit_price, price_multiplier, post_only
+            product_id,
+            fiat_amount,
+            limit_price,
+            price_multiplier,
+            post_only,
+            client_order_id=client_order_id,
+            retail_portfolio_id=retail_portfolio_id
         )
 
     def fiat_limit_sell(
@@ -193,7 +239,9 @@ class EnhancedRESTClient(RESTClient):
         fiat_amount: str,
         limit_price: Optional[str] = None,
         price_multiplier: float = DEFAULT_CONFIG['SELL_PRICE_MULTIPLIER'],
-        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT'],
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Execute a fiat limit sell order.
@@ -209,7 +257,13 @@ class EnhancedRESTClient(RESTClient):
             The API response as a dict.
         """
         return self._order_service.fiat_limit_sell(
-            product_id, fiat_amount, limit_price, price_multiplier, post_only
+            product_id,
+            fiat_amount,
+            limit_price,
+            price_multiplier,
+            post_only,
+            client_order_id=client_order_id,
+            retail_portfolio_id=retail_portfolio_id
         )
 
     def limit_sell_base_size(
@@ -217,7 +271,9 @@ class EnhancedRESTClient(RESTClient):
         product_id: str,
         base_size: str,
         limit_price: str,
-        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT'],
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
     ) -> Any:
         """
         Place a limit sell order for an exact base asset quantity.
@@ -226,7 +282,12 @@ class EnhancedRESTClient(RESTClient):
         Coinbase reports the actual filled base size.
         """
         return self._order_service.limit_sell_base_size(
-            product_id, base_size, limit_price, post_only
+            product_id,
+            base_size,
+            limit_price,
+            post_only,
+            client_order_id=client_order_id,
+            retail_portfolio_id=retail_portfolio_id
         )
 
     def cancel_open_orders(
@@ -423,6 +484,32 @@ class EnhancedRESTClient(RESTClient):
             The API response as a dict.
         """
         return self._fear_and_greed_strategy.execute_trade(product_id, fiat_amount)
+
+    def trade_based_on_fgi_ladder(
+        self,
+        product_id: str,
+        portfolio_uuid: str,
+        base_amount: str = "1.00",
+        ladder: Optional[List[Dict[str, Any]]] = None,
+        trade_date: Optional[str] = None,
+        job_name: str = "fear_and_greed",
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT'],
+    ) -> Dict[str, Any]:
+        """
+        Execute a static-dollar Fear & Greed ladder in a specific portfolio.
+
+        BUY and SELL amounts are quote-currency amounts, not portfolio
+        percentages. This is intended for simple DCA comparison demos.
+        """
+        return self._fear_and_greed_strategy.execute_static_ladder(
+            product_id=product_id,
+            portfolio_uuid=portfolio_uuid,
+            base_amount=base_amount,
+            ladder=ladder,
+            trade_date=trade_date,
+            job_name=job_name,
+            post_only=post_only,
+        )
 
     # -------------------------------------------------------------------------
     # Funds Operations (Delegated to FundsService)

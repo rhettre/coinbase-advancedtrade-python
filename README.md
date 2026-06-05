@@ -13,6 +13,8 @@ This is the unofficial Python client for the Coinbase Advanced Trade API. It all
 
 ## Setup
 
+This package supports Python 3.12 and newer, including Python 3.14.
+
 1. Install the package using pip:
    ```bash
    pip install coinbase-advancedtrade-python
@@ -360,9 +362,23 @@ For example, with the above schedule:
 - If FGI is 50 (Neutral), no trade will be executed
 - If FGI is 80 (Extreme Greed), it will sell with 0.6x the specified amount
 
+For portfolio-specific daily demos, use the static-dollar ladder helper. BUY and SELL amounts are fixed quote-currency amounts, not percentages of the portfolio:
+
+```python
+result = client.trade_based_on_fgi_ladder(
+    product_id="BTC-USDC",
+    portfolio_uuid="YOUR_FEAR_AND_GREED_PORTFOLIO_UUID",
+    base_amount="1.00"
+)
+
+print(result)
+```
+
+The default static ladder buys more during fear, holds through neutral and moderate greed, and sells a fixed $1.00 above the greed threshold.
+
 ## AlphaSquared Integration
 
-This client now includes integration with AlphaSquared, allowing you to execute trading strategies based on AlphaSquared's risk analysis.
+This client includes integration with AlphaSquared. The recommended workflow is to poll pending AlphaSquared strategy actions, place the corresponding Coinbase order, and then mark the AlphaSquared action as executed only after Coinbase accepts the order.
 
 ### Setup
 
@@ -390,9 +406,9 @@ alphasquared_client = AlphaSquared(alphasquared_api_key, cache_ttl=60)
 trader = AlphaSquaredTrader(coinbase_client, alphasquared_client)
 ```
 
-### Executing AlphaSquared Strategies
+### Executing Pending AlphaSquared Actions
 
-To execute a trading strategy based on AlphaSquared's risk analysis:
+To execute pending AlphaSquared strategy actions:
 
 ```python
 # Set trading parameters
@@ -401,31 +417,38 @@ product_id = "BTC-USDC"
 # Your custom strategy name from AlphaSquared
 strategy_name = "My Custom Strategy"
 
-# Execute strategy
-trader.execute_strategy(product_id, strategy_name)
+# Poll pending actions, place Coinbase limit orders, then check off AlphaSquared
+results = trader.execute_pending_strategy_actions(
+    product_id,
+    strategy_name=strategy_name
+)
+
+for result in results:
+    print(result.as_dict())
 ```
 
 This will:
-1. Fetch the current risk level for the specified asset from AlphaSquared.
-2. Determine the appropriate action (buy/sell) and value based on the custom strategy defined in AlphaSquared and the current risk.
-3. Execute the appropriate trade on Coinbase if the conditions are met.
 
-> **Note:** Make sure to handle exceptions and implement proper logging in your production code. This integration only works with custom strategies; it does not work with the default strategies provided by AlphaSquared.
+1. Fetch pending AlphaSquared actions with `executed=False`.
+2. Translate BUY actions into Coinbase limit buys where the AlphaSquared value is the quote currency amount to spend.
+3. Translate SELL actions into Coinbase limit sells where the AlphaSquared value is the percentage of available base asset balance to sell.
+4. Mark the AlphaSquared action `executed=True` only after Coinbase accepts the order.
 
-### Customizing Strategies
+By default, the runner resolves your Coinbase default portfolio and uses that portfolio for balance lookup and order placement. To run against a specific Coinbase portfolio, pass its UUID:
 
-You can create custom strategies by modifying the `execute_strategy` method in the `AlphaSquaredTrader` class. This allows you to define specific trading logic based on the risk levels provided by AlphaSquared.
+```python
+results = trader.execute_pending_strategy_actions(
+    "BTC-USDC",
+    strategy_name="My Custom Strategy",
+    portfolio_uuid="YOUR_COINBASE_PORTFOLIO_UUID"
+)
+```
 
-## AWS Lambda Compatibility
+The runner also sends a deterministic Coinbase `client_order_id` derived from the AlphaSquared action. This helps Coinbase return the existing order if the same action is retried after a timeout or scheduled job retry.
 
-When using this package in AWS Lambda, ensure your Lambda function is configured to use Python 3.12. The cryptography binaries in the Lambda layer are compiled for Python 3.12, and using a different Python runtime version will result in compatibility issues.
+For simple scheduled jobs, run one worker at a time and poll `executed=False`. If you intentionally run multiple workers in parallel, add your own coordination layer such as reserved cloud concurrency or a storage-backed lock.
 
-To configure your Lambda function:
-1. Set the runtime to Python 3.12
-2. Use the provided Lambda layer from the latest release
-3. If building custom layers, ensure they are built using the same Python version as the Lambda runtime.
-
-Lambda is a good fit for scheduled REST jobs, such as a once-per-day buy script. Persistent WebSocket bots are a different shape: run them on always-on compute such as a small EC2 instance with `systemd`, Docker, or another process manager that can restart the bot and keep logs.
+The older `trader.execute_strategy(product_id, strategy_name)` risk-value helper remains available for compatibility, but action polling is the better fit when AlphaSquared is already emitting strategy actions.
 
 ## Documentation
 

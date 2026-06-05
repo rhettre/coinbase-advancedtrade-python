@@ -35,40 +35,58 @@ class AccountService:
 
     def __init__(self, rest_client: RESTClient):
         self.rest_client = rest_client
-        self._accounts_cache = None
-        self._cache_timestamp = None
+        self._accounts_cache = {}
+        self._cache_timestamp = {}
         self._cache_duration = timedelta(hours=1)
 
-    def _get_accounts(self, limit: int = 250) -> Dict[str, Dict[str, Any]]:
-        if self._accounts_cache is None or \
-        (datetime.now() - self._cache_timestamp) > self._cache_duration:
+    def _get_accounts(
+        self,
+        limit: int = 250,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Dict[str, Dict[str, Any]]:
+        cache_key = retail_portfolio_id or "__default__"
+        cache_timestamp = self._cache_timestamp.get(cache_key)
+        if cache_key not in self._accounts_cache or \
+        cache_timestamp is None or \
+        (datetime.now() - cache_timestamp) > self._cache_duration:
             logger.info("Fetching fresh account data from Coinbase")
-            response = self.rest_client.get_accounts(limit=limit)
+            account_kwargs: Dict[str, Any] = {"limit": limit}
+            if retail_portfolio_id:
+                account_kwargs["retail_portfolio_id"] = retail_portfolio_id
+            response = self.rest_client.get_accounts(**account_kwargs)
             response_dict = ensure_dict(response)
-            self._accounts_cache = {
+            self._accounts_cache[cache_key] = {
                 account['currency']: {
                     'uuid': account['uuid'],
                     'available_balance': Decimal(account['available_balance']['value'])
                 }
                 for account in response_dict.get('accounts', [])
             }
-            logger.debug(f"Processed accounts cache: {self._accounts_cache}")
-            self._cache_timestamp = datetime.now()
-        return self._accounts_cache
+            logger.debug(f"Processed accounts cache: {self._accounts_cache[cache_key]}")
+            self._cache_timestamp[cache_key] = datetime.now()
+        return self._accounts_cache[cache_key]
 
-    def get_crypto_balance(self, currency: str) -> Decimal:
+    def get_crypto_balance(
+        self,
+        currency: str,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Decimal:
         """
         Get just the balance for a currency. More efficient than get_account_by_currency
         when you only need the balance.
         
         Args:
             currency: Currency code (e.g., "USD", "BTC")
+            retail_portfolio_id: Optional Coinbase portfolio UUID to scope the balance.
             
         Returns:
             Decimal balance (0 if account not found)
         """
         try:
-            account = self.get_account_by_currency(currency)
+            account = self.get_account_by_currency(
+                currency,
+                retail_portfolio_id=retail_portfolio_id
+            )
             balance = account.available_balance if account else Decimal('0')
             logger.info(f"Retrieved balance for {currency}: {balance}")
             return balance
@@ -76,19 +94,24 @@ class AccountService:
             logger.error(f"Error retrieving balance for {currency}: {str(e)}")
             raise
 
-    def get_account_by_currency(self, currency: str) -> Optional[Account]:
+    def get_account_by_currency(
+        self,
+        currency: str,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Optional[Account]:
         """
         Get full account details for a currency. Uses cached data for basic info
         and makes an additional API call for detailed account information.
         
         Args:
             currency: Currency code (e.g., "USD", "BTC")
+            retail_portfolio_id: Optional Coinbase portfolio UUID to scope the lookup.
             
         Returns:
             Account object if found, None otherwise
         """
         try:
-            accounts = self._get_accounts()
+            accounts = self._get_accounts(retail_portfolio_id=retail_portfolio_id)
             if currency not in accounts:
                 logger.warning(f"No account found for {currency}")
                 return None
@@ -157,7 +180,10 @@ class AccountService:
             logger.error(f"Error showing deposit methods: {str(e)}")
             raise
 
-    def list_held_crypto_balances(self) -> Dict[str, Decimal]:
+    def list_held_crypto_balances(
+        self,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Dict[str, Decimal]:
         """
         List all accounts with non-zero balances and their details.
         
@@ -165,7 +191,7 @@ class AccountService:
             Dict mapping currency codes to their balances
         """
         try:
-            accounts = self._get_accounts()
+            accounts = self._get_accounts(retail_portfolio_id=retail_portfolio_id)
             non_zero_balances = {
                 currency: account['available_balance']
                 for currency, account in accounts.items()

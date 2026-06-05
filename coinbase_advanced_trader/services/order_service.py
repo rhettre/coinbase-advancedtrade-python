@@ -34,6 +34,20 @@ class OrderService:
         """Generate a unique client order ID."""
         return str(uuid.uuid4())
 
+    def _client_order_id(self, client_order_id: Optional[str] = None) -> str:
+        """Use a caller-supplied client order ID or generate a fresh one."""
+        return client_order_id or self._generate_client_order_id()
+
+    def _order_kwargs(
+        self,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Build optional Coinbase order kwargs without passing empty values."""
+        kwargs: Dict[str, Any] = {}
+        if retail_portfolio_id:
+            kwargs["retail_portfolio_id"] = retail_portfolio_id
+        return kwargs
+
     def _order_side_text(self, side: Optional[OrderSide]) -> str:
         """Return a user-facing side value for logs and errors."""
         return side.value if isinstance(side, OrderSide) else "unknown"
@@ -76,7 +90,13 @@ class OrderService:
         logger.error(error_log)
         raise Exception(error_log)
 
-    def fiat_market_buy(self, product_id: str, fiat_amount: str) -> Order:
+    def fiat_market_buy(
+        self,
+        product_id: str,
+        fiat_amount: str,
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Order:
         """
         Place a market buy order for a specified fiat amount.
 
@@ -91,8 +111,12 @@ class OrderService:
             Exception: If the order placement fails.
         """
         try:
+            order_client_id = self._client_order_id(client_order_id)
             order_response = self.rest_client.market_order_buy(
-                self._generate_client_order_id(), product_id, fiat_amount
+                order_client_id,
+                product_id,
+                fiat_amount,
+                **self._order_kwargs(retail_portfolio_id)
             )
             order_response_dict = self._require_order_success(
                 order_response, "market", OrderSide.BUY
@@ -103,7 +127,8 @@ class OrderService:
                 product_id=product_id,
                 side=OrderSide.BUY,
                 type=OrderType.MARKET,
-                size=Decimal(fiat_amount)
+                size=Decimal(fiat_amount),
+                client_order_id=order_client_id
             )
             self._log_order_result(order_response_dict, product_id, fiat_amount, side=OrderSide.BUY)
             return order
@@ -116,7 +141,13 @@ class OrderService:
                 logger.error(error_log)
             raise
 
-    def fiat_market_sell(self, product_id: str, fiat_amount: str) -> Order:
+    def fiat_market_sell(
+        self,
+        product_id: str,
+        fiat_amount: str,
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
+    ) -> Order:
         """
         Place a market sell order for a specified fiat amount.
 
@@ -136,8 +167,12 @@ class OrderService:
         base_size = calculate_base_size(Decimal(fiat_amount), spot_price, base_increment)
         
         try:
+            order_client_id = self._client_order_id(client_order_id)
             order_response = self.rest_client.market_order_sell(
-                self._generate_client_order_id(), product_id, str(base_size)
+                order_client_id,
+                product_id,
+                str(base_size),
+                **self._order_kwargs(retail_portfolio_id)
             )
             order_response_dict = self._require_order_success(
                 order_response, "market", OrderSide.SELL
@@ -148,7 +183,8 @@ class OrderService:
                 product_id=product_id,
                 side=OrderSide.SELL,
                 type=OrderType.MARKET,
-                size=base_size
+                size=base_size,
+                client_order_id=order_client_id
             )
             self._log_order_result(order_response_dict, product_id, str(base_size), side=OrderSide.SELL)
             return order
@@ -167,7 +203,9 @@ class OrderService:
         fiat_amount: str, 
         limit_price: Optional[str] = None, 
         price_multiplier: float = BUY_PRICE_MULTIPLIER,
-        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT'],
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
     ) -> Order:
         """
         Place a limit buy order for a specified fiat amount.
@@ -182,7 +220,16 @@ class OrderService:
         Returns:
             Order: The order object containing details about the executed order.
         """
-        return self._place_limit_order(product_id, fiat_amount, limit_price, price_multiplier, OrderSide.BUY, post_only)
+        return self._place_limit_order(
+            product_id,
+            fiat_amount,
+            limit_price,
+            price_multiplier,
+            OrderSide.BUY,
+            post_only,
+            client_order_id=client_order_id,
+            retail_portfolio_id=retail_portfolio_id
+        )
 
     def fiat_limit_sell(
         self, 
@@ -190,7 +237,9 @@ class OrderService:
         fiat_amount: str, 
         limit_price: Optional[str] = None, 
         price_multiplier: float = SELL_PRICE_MULTIPLIER,
-        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT'],
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
     ) -> Order:
         """
         Place a limit sell order for a specified fiat amount.
@@ -205,7 +254,16 @@ class OrderService:
         Returns:
             Order: The order object containing details about the executed order.
         """
-        return self._place_limit_order(product_id, fiat_amount, limit_price, price_multiplier, OrderSide.SELL, post_only)
+        return self._place_limit_order(
+            product_id,
+            fiat_amount,
+            limit_price,
+            price_multiplier,
+            OrderSide.SELL,
+            post_only,
+            client_order_id=client_order_id,
+            retail_portfolio_id=retail_portfolio_id
+        )
     
     def _place_limit_order(
         self, 
@@ -214,7 +272,9 @@ class OrderService:
         limit_price: Optional[str], 
         price_multiplier: float, 
         side: OrderSide,
-        post_only: bool
+        post_only: bool,
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
     ) -> Order:
         """
         Place a limit order.
@@ -256,12 +316,14 @@ class OrderService:
                     else self.rest_client.limit_order_gtc_sell)
         
         try:
+            order_client_id = self._client_order_id(client_order_id)
             order_response = order_func(
-                self._generate_client_order_id(),
+                order_client_id,
                 product_id,
                 str(base_size),
                 str(adjusted_price),
-                post_only=post_only
+                post_only=post_only,
+                **self._order_kwargs(retail_portfolio_id)
             )
         except Exception as e:
             # Handle potential post-only rejection
@@ -284,7 +346,8 @@ class OrderService:
             side=side,
             type=OrderType.LIMIT,
             size=base_size,
-            price=adjusted_price
+            price=adjusted_price,
+            client_order_id=order_client_id
         )
         
         # Pass fiat_amount for buy orders, base_size for sell orders
@@ -297,7 +360,9 @@ class OrderService:
         product_id: str,
         base_size: str,
         limit_price: str,
-        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT']
+        post_only: bool = DEFAULT_CONFIG['POST_ONLY_DEFAULT'],
+        client_order_id: Optional[str] = None,
+        retail_portfolio_id: Optional[str] = None
     ) -> Order:
         """
         Place a limit sell using a base asset quantity.
@@ -318,12 +383,14 @@ class OrderService:
             raise ValueError(f"Base size must be greater than 0 for {product_id}")
 
         try:
+            order_client_id = self._client_order_id(client_order_id)
             order_response = self.rest_client.limit_order_gtc_sell(
-                self._generate_client_order_id(),
+                order_client_id,
                 product_id,
                 str(adjusted_size),
                 str(adjusted_price),
-                post_only=post_only
+                post_only=post_only,
+                **self._order_kwargs(retail_portfolio_id)
             )
         except Exception as e:
             error_message = str(e)
@@ -344,7 +411,8 @@ class OrderService:
             side=OrderSide.SELL,
             type=OrderType.LIMIT,
             size=adjusted_size,
-            price=adjusted_price
+            price=adjusted_price,
+            client_order_id=order_client_id
         )
         self._log_order_result(
             order_response_dict,
