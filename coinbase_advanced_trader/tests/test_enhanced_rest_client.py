@@ -46,7 +46,10 @@ class TestEnhancedRESTClient(unittest.TestCase):
         result = self.client.fiat_market_buy(product_id, fiat_amount)
 
         self.client._order_service.fiat_market_buy.assert_called_once_with(
-            product_id, fiat_amount
+            product_id,
+            fiat_amount,
+            client_order_id=None,
+            retail_portfolio_id=None
         )
         self.assertEqual(result, mock_order)
 
@@ -66,7 +69,10 @@ class TestEnhancedRESTClient(unittest.TestCase):
         result = self.client.fiat_market_sell(product_id, fiat_amount)
 
         self.client._order_service.fiat_market_sell.assert_called_once_with(
-            product_id, fiat_amount
+            product_id,
+            fiat_amount,
+            client_order_id=None,
+            retail_portfolio_id=None
         )
         self.assertEqual(result, mock_order)
 
@@ -79,7 +85,13 @@ class TestEnhancedRESTClient(unittest.TestCase):
         result = self.client.fiat_limit_buy(product_id, fiat_amount)
         
         self.client._order_service.fiat_limit_buy.assert_called_once_with(
-            product_id, fiat_amount, None, price_multiplier, False
+            product_id,
+            fiat_amount,
+            None,
+            price_multiplier,
+            False,
+            client_order_id=None,
+            retail_portfolio_id=None
         )
 
     def test_fiat_limit_sell(self):
@@ -91,7 +103,13 @@ class TestEnhancedRESTClient(unittest.TestCase):
         result = self.client.fiat_limit_sell(product_id, fiat_amount)
         
         self.client._order_service.fiat_limit_sell.assert_called_once_with(
-            product_id, fiat_amount, None, price_multiplier, False
+            product_id,
+            fiat_amount,
+            None,
+            price_multiplier,
+            False,
+            client_order_id=None,
+            retail_portfolio_id=None
         )
 
     def test_watch_ticker_delegates_to_websocket_service(self):
@@ -163,14 +181,19 @@ class TestEnhancedRESTClient(unittest.TestCase):
         )
 
         self.client._order_service.fiat_market_buy.assert_called_once_with(
-            'BTC-USDC', '10'
+            'BTC-USDC',
+            '10',
+            client_order_id=None,
+            retail_portfolio_id=None
         )
         self.client._websocket_service.place_order_and_wait_for_fill.assert_called_once()
         self.client._order_service.limit_sell_base_size.assert_called_once_with(
             'BTC-USDC',
             '0.0002',
             '52500.00',
-            False
+            False,
+            client_order_id=None,
+            retail_portfolio_id=None
         )
         self.assertEqual(result['buy_order'], buy_order)
         self.assertEqual(result['fill'], fill)
@@ -231,6 +254,32 @@ class TestEnhancedRESTClient(unittest.TestCase):
         self.assertEqual(call_args[0][0], product_id)
         self.assertAlmostEqual(Decimal(call_args[0][1]), Decimal(fiat_amount), places=8)
         self.assertEqual(result, mock_result)
+
+    def test_trade_based_on_fgi_ladder_delegates_to_strategy(self):
+        """Test the static Fear & Greed ladder delegates to the strategy service."""
+        expected = {'status': 'executed', 'action': 'buy'}
+        self.client._fear_and_greed_strategy.execute_static_ladder.return_value = expected
+
+        result = self.client.trade_based_on_fgi_ladder(
+            product_id='BTC-USDC',
+            portfolio_uuid='portfolio-1',
+            base_amount='1.00',
+            ladder=[{'max': 24, 'action': 'buy', 'amount': '2.00'}],
+            trade_date='2026-01-01',
+            job_name='fear_and_greed',
+            post_only=True,
+        )
+
+        self.client._fear_and_greed_strategy.execute_static_ladder.assert_called_once_with(
+            product_id='BTC-USDC',
+            portfolio_uuid='portfolio-1',
+            base_amount='1.00',
+            ladder=[{'max': 24, 'action': 'buy', 'amount': '2.00'}],
+            trade_date='2026-01-01',
+            job_name='fear_and_greed',
+            post_only=True,
+        )
+        self.assertEqual(result, expected)
 
     def test_update_fgi_schedule(self):
         """Test the update_fgi_schedule method."""

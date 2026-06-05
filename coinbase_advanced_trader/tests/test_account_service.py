@@ -75,6 +75,37 @@ class TestAccountService(unittest.TestCase):
         xrp_balance = self.account_service.get_crypto_balance('XRP')
         self.assertEqual(xrp_balance, Decimal('0'))
 
+    def test_get_crypto_balance_scoped_to_portfolio(self):
+        """Test balance lookup passes Coinbase portfolio scoping to accounts."""
+        self.rest_client_mock.get_accounts.return_value = {
+            'accounts': [
+                {
+                    'uuid': 'btc-account',
+                    'currency': 'BTC',
+                    'available_balance': {'value': '2.0', 'currency': 'BTC'}
+                }
+            ]
+        }
+        self.rest_client_mock.get_account.return_value = {
+            'account': {
+                'name': 'BTC Wallet',
+                'type': 'crypto',
+                'active': True,
+                'created_at': '2024-01-01T00:00:00Z'
+            }
+        }
+
+        balance = self.account_service.get_crypto_balance(
+            'BTC',
+            retail_portfolio_id='portfolio-1'
+        )
+
+        self.assertEqual(balance, Decimal('2.0'))
+        self.rest_client_mock.get_accounts.assert_called_once_with(
+            limit=250,
+            retail_portfolio_id='portfolio-1'
+        )
+
     def test_list_held_cryptocurrencies(self):
         """Test the list_held_cryptocurrencies method."""
         mock_accounts = {

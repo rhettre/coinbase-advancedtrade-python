@@ -156,6 +156,37 @@ class TestOrderService(unittest.TestCase):
         self.assertEqual(order.size, expected_size)
         self.assertEqual(order.price, adjusted_price)
 
+    def test_fiat_limit_buy_passes_client_order_id_and_portfolio(self):
+        """Test limit buys can be scoped and retried deterministically."""
+        product_id = "BTC-USDC"
+        fiat_amount = "10"
+        mock_order_response = {
+            'success': True,
+            'success_response': {
+                'order_id': 'test-order-id',
+                'product_id': product_id,
+                'side': 'BUY'
+            }
+        }
+        self.rest_client_mock.limit_order_gtc_buy.return_value = mock_order_response
+        self.price_service_mock.get_spot_price.return_value = Decimal('50000')
+        self.price_service_mock.get_product_details.return_value = {
+            'base_increment': '0.00000001',
+            'quote_increment': '0.01'
+        }
+
+        order = self.order_service.fiat_limit_buy(
+            product_id,
+            fiat_amount,
+            client_order_id='asq-order-1',
+            retail_portfolio_id='portfolio-1'
+        )
+
+        args, kwargs = self.rest_client_mock.limit_order_gtc_buy.call_args
+        self.assertEqual(args[0], 'asq-order-1')
+        self.assertEqual(kwargs['retail_portfolio_id'], 'portfolio-1')
+        self.assertEqual(order.client_order_id, 'asq-order-1')
+
     def test_fiat_limit_sell(self):
         """Test the fiat_limit_sell method."""
         product_id = "BTC-USDC"
@@ -248,6 +279,35 @@ class TestOrderService(unittest.TestCase):
         self.assertEqual(args[2], '0.12345678')
         self.assertEqual(args[3], '50000.01')
         self.assertTrue(kwargs['post_only'])
+
+    def test_limit_sell_base_size_passes_client_order_id_and_portfolio(self):
+        """Test exact-base sells can be scoped and retried deterministically."""
+        product_id = "BTC-USDC"
+        self.rest_client_mock.limit_order_gtc_sell.return_value = {
+            'success': True,
+            'success_response': {
+                'order_id': 'sell-order-id',
+                'product_id': product_id,
+                'side': 'SELL'
+            }
+        }
+        self.price_service_mock.get_product_details.return_value = {
+            'base_increment': Decimal('0.00000001'),
+            'quote_increment': Decimal('0.01')
+        }
+
+        order = self.order_service.limit_sell_base_size(
+            product_id,
+            '0.25',
+            '50000',
+            client_order_id='asq-sell-1',
+            retail_portfolio_id='portfolio-1'
+        )
+
+        args, kwargs = self.rest_client_mock.limit_order_gtc_sell.call_args
+        self.assertEqual(args[0], 'asq-sell-1')
+        self.assertEqual(kwargs['retail_portfolio_id'], 'portfolio-1')
+        self.assertEqual(order.client_order_id, 'asq-sell-1')
 
     def test_cancel_open_orders(self):
         """Test cancelling open orders with product and side filters."""
